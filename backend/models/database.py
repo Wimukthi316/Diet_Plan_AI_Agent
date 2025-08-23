@@ -25,4 +25,6 @@ async def init_database():
         document_models=[User, DietPlan, NutritionLog]
     )
     
-    print("✅ Database connected and models initialized")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Database connected and models initialized")

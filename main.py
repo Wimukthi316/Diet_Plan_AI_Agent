@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 import uvicorn
 import os
+import logging
 from dotenv import load_dotenv
 
 from backend.models.database import init_database
@@ -21,11 +22,11 @@ from backend.utils.security import verify_token
 load_dotenv()
 
 # Configure logging
-import logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger(__name__)
 
 # Initialize security
 security = HTTPBearer()
@@ -35,11 +36,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     await init_database()
-    print("✅ Database initialized")
-    print("✅ Diet Plan AI Agents system started")
+    logger.info("Database initialized")
+    logger.info("Diet Plan AI Agents system started")
     yield
     # Shutdown
-    print("🔄 Shutting down Diet Plan AI Agents system")
+    logger.info("Shutting down Diet Plan AI Agents system")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -89,18 +90,6 @@ async def root():
         "version": "1.0.0"
     }
 
-@app.post("/test-nutrition")
-async def test_nutrition():
-    """Test nutrition agent directly"""
-    from backend.agents.nutrition_calculator import NutritionCalculatorAgent
-    agent = NutritionCalculatorAgent()
-    
-    response = await agent.process_request(
-        {"message": "Analyze the nutrition in a banana", "type": "general"},
-        {"user_id": "test_user"}
-    )
-    return response
-
 @app.post("/auth/register")
 async def register(user_data: dict):
     """User registration endpoint"""
@@ -129,18 +118,15 @@ async def chat_with_agents(
 ):
     """Main chat endpoint for interacting with AI agents"""
     try:
-        print(f"📝 Received message: {message}")
+        logger.debug(f"Processing message from user {current_user.email}")
         response = await agent_coordinator.process_user_request(
             user_id=str(current_user.id),
             message=message.get("message"),
             context=message.get("context", {})
         )
-        print(f"🤖 Agent response: {response}")
         return response
     except Exception as e:
-        print(f"❌ Chat error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Chat error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/user/profile")
