@@ -518,12 +518,20 @@ class DietTrackerAgent(BaseAgent):
     
     async def _general_tracking_query(self, message: str, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle general tracking questions"""
+        
+        # Get user's recent tracking data for context
+        recent_logs = await self._get_recent_user_data(user_id)
+        
         prompt = f"""
         Answer this diet tracking question: {message}
         
         User context: {json.dumps(context, indent=2)}
+        Recent user data: {json.dumps(recent_logs, indent=2)}
         
         Provide helpful advice about diet tracking, progress monitoring, or goal achievement.
+        Use emojis and formatting to make the response engaging.
+        Be encouraging and motivational.
+        Provide specific, actionable recommendations.
         """
         
         response = await self.generate_response(prompt, context)
@@ -531,9 +539,44 @@ class DietTrackerAgent(BaseAgent):
         return {
             "agent": self.name,
             "response": response,
+            "user_data": recent_logs,
             "type": "general_tracking",
             "status": "success"
         }
+    
+    async def _get_recent_user_data(self, user_id: str) -> Dict[str, Any]:
+        """Get recent user tracking data for context"""
+        try:
+            # Get recent nutrition logs
+            recent_logs = await NutritionLog.find(
+                {"user_id": ObjectId(user_id)}
+            ).sort("-date").limit(7).to_list()
+            
+            if not recent_logs:
+                return {"message": "No recent tracking data found"}
+            
+            # Summarize recent activity
+            summary = {
+                "days_tracked": len(recent_logs),
+                "avg_calories": sum(log.total_calories_consumed for log in recent_logs) / len(recent_logs) if recent_logs else 0,
+                "total_water": sum(log.total_water_intake for log in recent_logs),
+                "recent_foods": []
+            }
+            
+            # Get recent foods
+            for log in recent_logs[:3]:  # Last 3 days
+                for entry in log.food_entries[-5:]:  # Last 5 foods per day
+                    summary["recent_foods"].append({
+                        "food": entry.food_name,
+                        "calories": entry.calories,
+                        "date": log.date.strftime("%Y-%m-%d")
+                    })
+            
+            return summary
+            
+        except Exception as e:
+            self.logger.error(f"Error getting user data: {e}")
+            return {"message": "Unable to retrieve recent data"}
     
     def get_agent_description(self) -> Dict[str, Any]:
         """Get agent description and capabilities"""

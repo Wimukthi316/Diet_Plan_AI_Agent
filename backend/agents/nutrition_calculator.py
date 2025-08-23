@@ -380,13 +380,71 @@ class NutritionCalculatorAgent(BaseAgent):
     
     async def _general_nutrition_query(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle general nutrition questions"""
+        
+        # Check if this is a simple food analysis request
+        if any(keyword in message.lower() for keyword in ["analyze", "nutrition", "calories", "nutrients"]):
+            # Extract food name from the message
+            food_keywords = ["banana", "apple", "chicken", "rice", "bread", "egg", "milk", "cheese", "salmon", "spinach"]
+            detected_food = None
+            for food in food_keywords:
+                if food in message.lower():
+                    detected_food = food
+                    break
+            
+            if detected_food:
+                # Perform detailed food analysis
+                food_analysis = await self._analyze_food_item({
+                    "name": detected_food,
+                    "quantity": 100,
+                    "unit": "g"
+                }, context)
+                
+                if food_analysis.get("food_analysis"):
+                    nutrition = food_analysis["food_analysis"]
+                    
+                    # Format the response nicely
+                    response = f"**Nutrition Analysis for {nutrition['food_name']} (per 100g):**\n\n"
+                    response += f"🔥 **Calories:** {nutrition.get('calories', 0)} kcal\n"
+                    response += f"🥩 **Protein:** {nutrition.get('protein', 0)}g\n"
+                    response += f"🍞 **Carbohydrates:** {nutrition.get('carbs', 0)}g\n"
+                    response += f"🧈 **Fat:** {nutrition.get('fat', 0)}g\n"
+                    response += f"🌾 **Fiber:** {nutrition.get('fiber', 0)}g\n"
+                    response += f"🍯 **Sugar:** {nutrition.get('sugar', 0)}g\n"
+                    response += f"🧂 **Sodium:** {nutrition.get('sodium', 0)}mg\n\n"
+                    
+                    # Add AI insights
+                    insights_prompt = f"""
+                    Provide brief health insights about {detected_food} based on this nutrition data:
+                    {json.dumps(nutrition, indent=2)}
+                    
+                    Include:
+                    1. Key nutritional benefits
+                    2. Health considerations
+                    3. Best ways to consume it
+                    
+                    Keep it concise and positive.
+                    """
+                    
+                    insights = await self.generate_response(insights_prompt, context)
+                    response += f"**Health Insights:**\n{insights}"
+                    
+                    return {
+                        "agent": self.name,
+                        "response": response,
+                        "food_analysis": nutrition,
+                        "type": "food_analysis",
+                        "status": "success"
+                    }
+        
+        # Default general nutrition response
         prompt = f"""
         Answer this nutrition question: {message}
         
         User context: {json.dumps(context, indent=2)}
         
         Provide accurate, science-based information that's helpful and easy to understand.
-        If you're unsure about something, acknowledge the limitation.
+        Use emojis and formatting to make the response engaging.
+        If analyzing food, provide specific nutritional values when possible.
         """
         
         response = await self.generate_response(prompt, context)

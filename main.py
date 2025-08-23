@@ -20,6 +20,13 @@ from backend.utils.security import verify_token
 # Load environment variables
 load_dotenv()
 
+# Configure logging
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 # Initialize security
 security = HTTPBearer()
 

@@ -75,6 +75,20 @@ const ChatPage = () => {
     }
 
     let content = '';
+    let agentName = 'AI Assistant';
+
+    // Get the primary agent name
+    if (responseData.primary_agent) {
+      const agentNames = {
+        'nutrition_calculator': 'Nutrition Calculator',
+        'recipe_finder': 'Recipe Finder',
+        'diet_tracker': 'Diet Tracker'
+      };
+      agentName = agentNames[responseData.primary_agent] || 'AI Assistant';
+    }
+
+    // Add agent identifier
+    content += `*Processed by: ${agentName}*\n\n`;
 
     // Primary response
     if (responseData.primary_response) {
@@ -83,11 +97,13 @@ const ChatPage = () => {
       } else if (responseData.primary_response.food_analysis) {
         const analysis = responseData.primary_response.food_analysis;
         content += `**Nutrition Analysis for ${analysis.food_name}**\n\n`;
-        content += `• Calories: ${analysis.calories}\n`;
-        content += `• Protein: ${analysis.protein}g\n`;
-        content += `• Carbs: ${analysis.carbs}g\n`;
-        content += `• Fat: ${analysis.fat}g\n`;
-        if (analysis.fiber) content += `• Fiber: ${analysis.fiber}g\n`;
+        content += `🔥 **Calories:** ${analysis.calories} kcal\n`;
+        content += `🥩 **Protein:** ${analysis.protein}g\n`;
+        content += `🍞 **Carbs:** ${analysis.carbs}g\n`;
+        content += `🧈 **Fat:** ${analysis.fat}g\n`;
+        if (analysis.fiber) content += `🌾 **Fiber:** ${analysis.fiber}g\n`;
+        if (analysis.sugar) content += `🍯 **Sugar:** ${analysis.sugar}g\n`;
+        if (analysis.sodium) content += `🧂 **Sodium:** ${analysis.sodium}mg\n`;
       } else if (responseData.primary_response.recipes) {
         content += `**Recipe Suggestions:**\n\n`;
         responseData.primary_response.recipes.slice(0, 3).forEach((recipe, index) => {
