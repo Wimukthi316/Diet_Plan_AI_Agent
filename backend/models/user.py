@@ -3,13 +3,15 @@ User model for the Diet Plan AI system
 """
 
 from beanie import Document
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, List, Dict
 from datetime import datetime
 from bson import ObjectId
 
 class UserProfile(BaseModel):
     """User profile information"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     age: Optional[int] = None
     gender: Optional[str] = None
     weight: Optional[float] = None  # in kg
@@ -22,6 +24,8 @@ class UserProfile(BaseModel):
 
 class User(Document):
     """User document model"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr = Field(..., unique=True)
     password_hash: str = Field(..., min_length=8)

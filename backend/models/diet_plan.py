@@ -3,13 +3,15 @@ Diet Plan model for storing personalized diet plans
 """
 
 from beanie import Document
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict
 from datetime import datetime
 from bson import ObjectId
 
 class Meal(BaseModel):
     """Individual meal structure"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     name: str
     food_items: List[Dict]  # [{name, quantity, unit, calories, nutrients}]
     total_calories: float
@@ -20,6 +22,8 @@ class Meal(BaseModel):
 
 class DayPlan(BaseModel):
     """Single day diet plan"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     date: datetime
     meals: List[Meal]
     total_daily_calories: float
@@ -29,6 +33,8 @@ class DayPlan(BaseModel):
 
 class DietPlan(Document):
     """Diet plan document model"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     user_id: ObjectId = Field(..., description="Reference to user")
     plan_name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None

@@ -3,13 +3,15 @@ Nutrition Log model for tracking daily food intake
 """
 
 from beanie import Document
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict
 from datetime import datetime
 from bson import ObjectId
 
 class FoodEntry(BaseModel):
     """Individual food entry"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     food_name: str
     food_id: Optional[str] = None  # USDA food ID if available
     quantity: float
@@ -21,11 +23,14 @@ class FoodEntry(BaseModel):
 
 class WaterEntry(BaseModel):
     """Water intake entry"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     amount: float  # in ml
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 class ExerciseEntry(BaseModel):
     """Exercise entry"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     activity: str
     duration: int  # in minutes
     calories_burned: Optional[float] = None
