@@ -89,6 +89,18 @@ async def root():
         "version": "1.0.0"
     }
 
+@app.post("/test-nutrition")
+async def test_nutrition():
+    """Test nutrition agent directly"""
+    from backend.agents.nutrition_calculator import NutritionCalculatorAgent
+    agent = NutritionCalculatorAgent()
+    
+    response = await agent.process_request(
+        {"message": "Analyze the nutrition in a banana", "type": "general"},
+        {"user_id": "test_user"}
+    )
+    return response
+
 @app.post("/auth/register")
 async def register(user_data: dict):
     """User registration endpoint"""
@@ -117,13 +129,18 @@ async def chat_with_agents(
 ):
     """Main chat endpoint for interacting with AI agents"""
     try:
+        print(f"📝 Received message: {message}")
         response = await agent_coordinator.process_user_request(
             user_id=str(current_user.id),
             message=message.get("message"),
             context=message.get("context", {})
         )
+        print(f"🤖 Agent response: {response}")
         return response
     except Exception as e:
+        print(f"❌ Chat error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/user/profile")

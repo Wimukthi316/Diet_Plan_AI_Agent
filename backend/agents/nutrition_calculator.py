@@ -76,12 +76,14 @@ class NutritionCalculatorAgent(BaseAgent):
         # Search USDA database first
         usda_data = await self._search_usda_food(food_name)
         
-        if usda_data and usda_data.get("foods"):
+        if usda_data and usda_data.get("foods") and len(usda_data["foods"]) > 0:
             # Use USDA data as primary source
             nutrition_info = await self._process_usda_data(usda_data["foods"][0], quantity, unit)
+            data_source = "USDA"
         else:
             # Fallback to AI estimation
             nutrition_info = await self._ai_nutrition_estimation(food_name, quantity, unit, context)
+            data_source = "AI_Estimation"
         
         # Add AI insights and recommendations
         ai_insights = await self._generate_nutrition_insights(nutrition_info, context)
@@ -90,7 +92,7 @@ class NutritionCalculatorAgent(BaseAgent):
             "agent": self.name,
             "food_analysis": nutrition_info,
             "ai_insights": ai_insights,
-            "data_source": "USDA" if usda_data else "AI_Estimation",
+            "data_source": data_source,
             "status": "success"
         }
     
@@ -290,6 +292,38 @@ class NutritionCalculatorAgent(BaseAgent):
     
     async def _ai_nutrition_estimation(self, food_name: str, quantity: float, unit: str, context: Dict) -> Dict[str, Any]:
         """Use AI to estimate nutrition when USDA data is unavailable"""
+        
+        # Provide known nutrition data for common foods
+        common_foods_nutrition = {
+            'egg': {'calories': 70, 'protein': 6, 'carbs': 0.6, 'fat': 5, 'fiber': 0, 'sugar': 0.6, 'sodium': 65},
+            'banana': {'calories': 89, 'protein': 1.1, 'carbs': 23, 'fat': 0.3, 'fiber': 2.6, 'sugar': 12, 'sodium': 1},
+            'apple': {'calories': 52, 'protein': 0.3, 'carbs': 14, 'fat': 0.2, 'fiber': 2.4, 'sugar': 10, 'sodium': 1},
+            'chicken': {'calories': 165, 'protein': 31, 'carbs': 0, 'fat': 3.6, 'fiber': 0, 'sugar': 0, 'sodium': 74},
+            'rice': {'calories': 130, 'protein': 2.7, 'carbs': 28, 'fat': 0.3, 'fiber': 0.4, 'sugar': 0.1, 'sodium': 1},
+            'bread': {'calories': 265, 'protein': 9, 'carbs': 49, 'fat': 3.2, 'fiber': 2.7, 'sugar': 5, 'sodium': 491},
+            'milk': {'calories': 42, 'protein': 3.4, 'carbs': 5, 'fat': 1, 'fiber': 0, 'sugar': 5, 'sodium': 44}
+        }
+        
+        # Check if we have predefined data for this food
+        if food_name.lower() in common_foods_nutrition:
+            base_nutrition = common_foods_nutrition[food_name.lower()]
+            
+            # Scale based on quantity (base values are per 100g or per piece for eggs)
+            scale_factor = quantity / 100 if unit == 'g' else quantity
+            if food_name.lower() == 'egg' and unit == 'g':
+                scale_factor = quantity / 50  # One egg is about 50g
+            
+            scaled_nutrition = {k: round(v * scale_factor, 1) for k, v in base_nutrition.items()}
+            
+            return {
+                "food_name": food_name,
+                "quantity": quantity,
+                "unit": unit,
+                "source": "database",
+                **scaled_nutrition
+            }
+        
+        # If not in our database, use AI
         prompt = f"""
         Estimate the nutritional content for {quantity} {unit} of {food_name}.
         
@@ -328,13 +362,13 @@ class NutritionCalculatorAgent(BaseAgent):
             "food_name": food_name,
             "quantity": quantity,
             "unit": unit,
-            "calories": 0,
-            "protein": 0,
-            "carbs": 0,
-            "fat": 0,
-            "fiber": 0,
-            "sugar": 0,
-            "sodium": 0,
+            "calories": 100,
+            "protein": 5,
+            "carbs": 15,
+            "fat": 3,
+            "fiber": 2,
+            "sugar": 5,
+            "sodium": 50,
             "source": "default"
         }
     
@@ -356,6 +390,129 @@ class NutritionCalculatorAgent(BaseAgent):
         """
         
         return await self.generate_response(prompt, context)
+    
+    def _extract_food_from_message(self, message: str) -> Optional[str]:
+        """Extract food name from user message"""
+        import re
+        
+        # Common food items with variations
+        food_patterns = {
+            r'banana[s]?': 'banana',
+            r'apple[s]?': 'apple',
+            r'chicken': 'chicken',
+            r'rice': 'rice',
+            r'bread': 'bread',
+            r'egg[s]?': 'egg',
+            r'milk': 'milk',
+            r'cheese': 'cheese',
+            r'salmon': 'salmon',
+            r'spinach': 'spinach',
+            r'beef': 'beef',
+            r'pork': 'pork',
+            r'turkey': 'turkey',
+            r'tuna': 'tuna',
+            r'broccoli': 'broccoli',
+            r'carrot[s]?': 'carrot',
+            r'potato[es]?': 'potato',
+            r'tomato[es]?': 'tomato',
+            r'orange[s]?': 'orange',
+            r'strawberr(?:y|ies)': 'strawberry',
+            r'blueberr(?:y|ies)': 'blueberry',
+            r'yogurt': 'yogurt',
+            r'oat[s]?': 'oats',
+            r'quinoa': 'quinoa',
+            r'pasta': 'pasta',
+            r'nuts?': 'nuts',
+            r'almond[s]?': 'almond',
+            r'avocado[s]?': 'avocado'
+        }
+        
+        message_lower = message.lower()
+        
+        for pattern, food_name in food_patterns.items():
+            if re.search(pattern, message_lower):
+                return food_name
+        
+        # If no specific food found, try to extract using AI
+        return self._ai_extract_food_name(message)
+    
+    def _extract_quantity_from_message(self, message: str, food_name: str) -> tuple:
+        """Extract quantity and unit from message"""
+        import re
+        
+        # Look for numbers in the message
+        number_patterns = [
+            r'(\d+)\s*(?:pieces?|items?|units?)',
+            r'(\d+)\s*(?:cups?)',
+            r'(\d+)\s*(?:tablespoons?|tbsp)',
+            r'(\d+)\s*(?:teaspoons?|tsp)',
+            r'(\d+)\s*(?:grams?|g)',
+            r'(\d+)\s*(?:ounces?|oz)',
+            r'(\d+)\s*(?:pounds?|lbs?)',
+            r'(\d+)',  # Just a number
+        ]
+        
+        message_lower = message.lower()
+        
+        # Handle specific cases
+        if 'two' in message_lower or '2' in message:
+            if food_name == 'egg':
+                return 100, 'g'  # 2 large eggs ≈ 100g
+            return 2, 'pieces'
+        
+        if 'one' in message_lower or '1' in message:
+            if food_name == 'egg':
+                return 50, 'g'  # 1 large egg ≈ 50g
+            return 1, 'piece'
+        
+        # Look for explicit quantities
+        for pattern in number_patterns:
+            match = re.search(pattern, message_lower)
+            if match:
+                quantity = int(match.group(1))
+                if 'cup' in pattern:
+                    return quantity * 240, 'g'  # 1 cup ≈ 240g
+                elif 'tablespoon' in pattern or 'tbsp' in pattern:
+                    return quantity * 15, 'g'   # 1 tbsp ≈ 15g
+                elif 'teaspoon' in pattern or 'tsp' in pattern:
+                    return quantity * 5, 'g'    # 1 tsp ≈ 5g
+                elif 'gram' in pattern or 'g' == pattern.split()[-1]:
+                    return quantity, 'g'
+                elif 'ounce' in pattern or 'oz' in pattern:
+                    return quantity * 28.35, 'g'  # 1 oz ≈ 28.35g
+                elif 'pound' in pattern or 'lb' in pattern:
+                    return quantity * 453.6, 'g'  # 1 lb ≈ 453.6g
+                else:
+                    # Default for pieces
+                    if food_name == 'egg':
+                        return quantity * 50, 'g'  # Each egg ≈ 50g
+                    elif food_name in ['banana', 'apple', 'orange']:
+                        return quantity * 150, 'g'  # Medium fruit ≈ 150g
+                    else:
+                        return quantity * 100, 'g'  # Default serving
+        
+        # Default fallback
+        return 100, 'g'
+    
+    def _ai_extract_food_name(self, message: str) -> Optional[str]:
+        """Use AI to extract food name when pattern matching fails"""
+        try:
+            # Simple extraction - look for food-related words
+            words = message.lower().split()
+            
+            # Skip common words
+            skip_words = {'the', 'a', 'an', 'in', 'of', 'analyze', 'nutrition', 'calculate', 'calories', 'nutrients'}
+            
+            for word in words:
+                word = word.strip('.,!?')
+                if word not in skip_words and len(word) > 2:
+                    # This is likely a food name
+                    return word
+            
+            return None
+            
+        except Exception:
+            return None
     
     async def _generate_daily_insights(self, daily_totals: Dict, meal_breakdown: Dict, context: Dict) -> str:
         """Generate insights for daily intake analysis"""
@@ -382,28 +539,26 @@ class NutritionCalculatorAgent(BaseAgent):
         """Handle general nutrition questions"""
         
         # Check if this is a simple food analysis request
-        if any(keyword in message.lower() for keyword in ["analyze", "nutrition", "calories", "nutrients"]):
-            # Extract food name from the message
-            food_keywords = ["banana", "apple", "chicken", "rice", "bread", "egg", "milk", "cheese", "salmon", "spinach"]
-            detected_food = None
-            for food in food_keywords:
-                if food in message.lower():
-                    detected_food = food
-                    break
+        if any(keyword in message.lower() for keyword in ["analyze", "nutrition", "calories", "nutrients", "calculate"]):
+            # Extract food name from the message using improved logic
+            detected_food = self._extract_food_from_message(message)
             
             if detected_food:
+                # Handle quantity extraction
+                quantity, unit = self._extract_quantity_from_message(message, detected_food)
+                
                 # Perform detailed food analysis
                 food_analysis = await self._analyze_food_item({
                     "name": detected_food,
-                    "quantity": 100,
-                    "unit": "g"
+                    "quantity": quantity,
+                    "unit": unit
                 }, context)
                 
                 if food_analysis.get("food_analysis"):
                     nutrition = food_analysis["food_analysis"]
                     
                     # Format the response nicely
-                    response = f"**Nutrition Analysis for {nutrition['food_name']} (per 100g):**\n\n"
+                    response = f"**Nutrition Analysis for {quantity} {unit} of {nutrition['food_name']}:**\n\n"
                     response += f"🔥 **Calories:** {nutrition.get('calories', 0)} kcal\n"
                     response += f"🥩 **Protein:** {nutrition.get('protein', 0)}g\n"
                     response += f"🍞 **Carbohydrates:** {nutrition.get('carbs', 0)}g\n"

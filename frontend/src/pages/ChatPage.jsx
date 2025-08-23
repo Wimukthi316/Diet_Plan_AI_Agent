@@ -122,6 +122,16 @@ const ChatPage = () => {
         if (analysis.insights) {
           content += `**Insights:** ${analysis.insights}`;
         }
+      } else {
+        // Fallback: try to extract any text response from the primary_response
+        const response = responseData.primary_response;
+        if (typeof response === 'string') {
+          content += response;
+        } else if (response && typeof response === 'object') {
+          // Try different possible response fields
+          content += response.response || response.text || response.content || 
+                    JSON.stringify(response, null, 2);
+        }
       }
     }
 
