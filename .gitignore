@@ -60,6 +60,7 @@ frontend/.cache/
 frontend/coverage/
 frontend/*.log
 frontend/.eslintcache
+frontend/package-lock.json
 
 # Logs
 *.log
