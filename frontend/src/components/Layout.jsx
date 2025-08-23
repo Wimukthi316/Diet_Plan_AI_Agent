@@ -147,7 +147,7 @@ const Layout = ({ children }) => {
             onClick={handleLogout}
             className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
           >
-            <ArrowRightOnRectangleIcon className="w-4 h-4" />
+            <LogOut className="w-4 h-4" />
             <span>Sign out</span>
           </button>
         </div>
@@ -162,7 +162,7 @@ const Layout = ({ children }) => {
               onClick={() => setSidebarOpen(true)}
               className="p-2 rounded-md text-gray-400 hover:text-gray-500 lg:hidden"
             >
-              <Bars3Icon className="w-6 h-6" />
+              <Menu className="w-6 h-6" />
             </button>
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">
