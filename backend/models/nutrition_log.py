@@ -31,6 +31,7 @@ class WaterEntry(BaseModel):
 class ExerciseEntry(BaseModel):
     """Exercise entry"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     activity: str
     duration: int  # in minutes
     calories_burned: Optional[float] = None
@@ -38,6 +39,8 @@ class ExerciseEntry(BaseModel):
 
 class NutritionLog(Document):
     """Daily nutrition log document"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     user_id: ObjectId = Field(..., description="Reference to user")
     date: datetime = Field(..., description="Date of the log (date only)")
     food_entries: List[FoodEntry] = []

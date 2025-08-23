@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from backend.agents.base_agent import BaseAgent
 from backend.utils.security import sanitize_input
 from langchain.agents import Tool
-from langchain.utilities import SerpAPIWrapper
+from langchain_community.utilities import SerpAPIWrapper
 import os
 from dotenv import load_dotenv
 import re
