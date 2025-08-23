@@ -94,7 +94,7 @@ const Layout = ({ children }) => {
               onClick={handleLogout}
               className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
             >
-              <ArrowRightOnRectangleIcon className="w-4 h-4" />
+              <LogOut className="w-4 h-4" />
               <span>Sign out</span>
             </button>
           </div>
@@ -106,7 +106,7 @@ const Layout = ({ children }) => {
         <div className="flex h-16 items-center px-6 border-b border-gray-200">
           <Link to="/dashboard" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <BeakerIcon className="w-5 h-5 text-white" />
+              <Beaker className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold gradient-text">Diet AI</span>
           </Link>
