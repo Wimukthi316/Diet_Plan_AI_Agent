@@ -20,5 +20,5 @@ requests==2.32.3
 pymongo==4.14.1
 motor==3.7.1
 beanie==2.0.0
-langchain==0.2.12
-langchain-community==0.2.12
+langchain==0.2.16
+langchain-community==0.2.16

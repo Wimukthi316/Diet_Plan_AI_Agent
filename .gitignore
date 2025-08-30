@@ -32,9 +32,12 @@ venv.bak/
 
 # Environment Variables
 .env
+.env.*
 .env.local
 .env.development.local
 .env.production.local
+.env.test
+.env.staging
 
 # IDE and Editor Files
 .vscode/

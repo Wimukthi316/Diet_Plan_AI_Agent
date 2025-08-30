@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from backend.models.database import init_database
 from backend.models.user import User
+from backend.models.chat_history import ChatMessage
 from backend.services.auth import AuthService
 from backend.agents.coordinator import AgentCoordinator
 from backend.utils.security import verify_token
@@ -35,8 +36,12 @@ security = HTTPBearer()
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    await init_database()
-    logger.info("Database initialized")
+    try:
+        await init_database()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        logger.info("Continuing without database - some features may be limited")
     logger.info("Diet Plan AI Agents system started")
     yield
     # Shutdown
@@ -83,10 +88,19 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Root endpoint"""
     return {
         "message": "Diet Plan AI Agents API",
         "status": "active",
+        "version": "1.0.0"
+    }
+
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "message": "Diet Plan AI Agents API is running",
         "version": "1.0.0"
     }
 
@@ -94,22 +108,66 @@ async def root():
 async def register(user_data: dict):
     """User registration endpoint"""
     try:
+        # Validate required fields
+        required_fields = ["name", "email", "password"]
+        for field in required_fields:
+            if field not in user_data or not user_data[field]:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Missing required field: {field}"
+                )
+        
+        # Validate password length
+        if len(user_data["password"]) < 6:
+            raise HTTPException(
+                status_code=400, 
+                detail="Password must be at least 6 characters long"
+            )
+        
+        # Validate email format (basic check)
+        if "@" not in user_data["email"]:
+            raise HTTPException(
+                status_code=400, 
+                detail="Invalid email format"
+            )
+        
         user = await auth_service.register_user(user_data)
-        return {"message": "User registered successfully", "user_id": str(user.id)}
-    except Exception as e:
+        return {
+            "message": "User registered successfully", 
+            "user_id": str(user.id),
+            "email": user.email
+        }
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during registration")
 
 @app.post("/auth/login")
 async def login(credentials: dict):
     """User login endpoint"""
     try:
+        # Validate required fields
+        if not credentials.get("email") or not credentials.get("password"):
+            raise HTTPException(
+                status_code=400, 
+                detail="Email and password are required"
+            )
+        
         token = await auth_service.authenticate_user(
             credentials.get("email"), 
             credentials.get("password")
         )
-        return {"access_token": token, "token_type": "bearer"}
-    except Exception as e:
+        return {
+            "access_token": token, 
+            "token_type": "bearer",
+            "message": "Login successful"
+        }
+    except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during login")
 
 @app.post("/chat")
 async def chat_with_agents(
@@ -119,14 +177,66 @@ async def chat_with_agents(
     """Main chat endpoint for interacting with AI agents"""
     try:
         logger.debug(f"Processing message from user {current_user.email}")
+        user_message = message.get("message", "")
+        
         response = await agent_coordinator.process_user_request(
             user_id=str(current_user.id),
-            message=message.get("message"),
+            message=user_message,
             context=message.get("context", {})
         )
+        
+        # Save chat interaction to history
+        if response and user_message:
+            await ChatMessage.save_chat_interaction(
+                user_id=str(current_user.id),
+                message=user_message,
+                response=response.get("response", ""),
+                agent_name=response.get("agent", "Unknown"),
+                metadata={
+                    "status": response.get("status"),
+                    "type": response.get("type", "chat")
+                }
+            )
+        
         return response
     except Exception as e:
         logger.error(f"Chat error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/history")
+async def get_chat_history(
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get user's chat history"""
+    try:
+        history = await ChatMessage.get_user_history(str(current_user.id), limit)
+        return {
+            "history": [
+                {
+                    "id": str(msg.id),
+                    "message": msg.message,
+                    "response": msg.response,
+                    "agent": msg.agent_name,
+                    "timestamp": msg.timestamp.isoformat(),
+                    "type": msg.message_type
+                }
+                for msg in history
+            ],
+            "total": len(history)
+        }
+    except Exception as e:
+        logger.error(f"Error getting chat history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/chat/history")
+async def clear_chat_history(current_user: User = Depends(get_current_user)):
+    """Clear user's chat history"""
+    try:
+        await ChatMessage.find(ChatMessage.user_id == str(current_user.id)).delete()
+        return {"message": "Chat history cleared successfully"}
+    except Exception as e:
+        logger.error(f"Error clearing chat history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/user/profile")

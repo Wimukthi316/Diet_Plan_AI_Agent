@@ -1,19 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader } from 'lucide-react';
+import { Send, Bot, User, Loader, Trash2 } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 const ChatPage = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'ai',
-      content: "Hello! I'm your AI nutrition assistant. I can help you with:\n\n• Analyzing food nutrition\n• Finding healthy recipes\n• Tracking your diet progress\n• Answering nutrition questions\n\nWhat would you like to know today?",
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -23,6 +17,78 @@ const ChatPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Load chat history on component mount
+  useEffect(() => {
+    loadChatHistory();
+  }, []);
+
+  const loadChatHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const response = await chatAPI.getChatHistory();
+      
+      if (response.data && response.data.history && response.data.history.length > 0) {
+        // Convert history to message format
+        const historyMessages = response.data.history.reverse().map((item, index) => [
+          {
+            id: `${item.id}-user-${index}`,
+            type: 'user',
+            content: item.message,
+            timestamp: new Date(item.timestamp),
+            agent: item.agent
+          },
+          {
+            id: `${item.id}-ai-${index}`,
+            type: 'ai',
+            content: item.response,
+            timestamp: new Date(item.timestamp),
+            agent: item.agent
+          }
+        ]).flat();
+        
+        setMessages(historyMessages);
+      } else {
+        // Show welcome message if no history
+        setMessages([{
+          id: 'welcome',
+          type: 'ai',
+          content: "**AI Nutrition Assistant**\n*Powered by 3 specialized AI agents*\n\nHello! I'm your AI nutrition assistant. I can help you with:\n\n• Analyzing food nutrition\n• Finding healthy recipes\n• Tracking your diet progress\n• Answering nutrition questions\n\nWhat would you like to know today?",
+          timestamp: new Date(),
+          agent: 'System'
+        }]);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+      // Show welcome message on error
+      setMessages([{
+        id: 'welcome',
+        type: 'ai',
+        content: "**AI Nutrition Assistant**\n*Powered by 3 specialized AI agents*\n\nHello! I'm your AI nutrition assistant. I can help you with:\n\n• Analyzing food nutrition\n• Finding healthy recipes\n• Tracking your diet progress\n• Answering nutrition questions\n\nWhat would you like to know today?",
+        timestamp: new Date(),
+        agent: 'System'
+      }]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const clearChatHistory = async () => {
+    try {
+      await chatAPI.clearChatHistory();
+      setMessages([{
+        id: 'welcome',
+        type: 'ai',
+        content: "**AI Nutrition Assistant**\n*Powered by 3 specialized AI agents*\n\nHello! I'm your AI nutrition assistant. I can help you with:\n\n• Analyzing food nutrition\n• Finding healthy recipes\n• Tracking your diet progress\n• Answering nutrition questions\n\nWhat would you like to know today?",
+        timestamp: new Date(),
+        agent: 'System'
+      }]);
+      toast.success('Chat history cleared!');
+    } catch (error) {
+      console.error('Error clearing chat history:', error);
+      toast.error('Failed to clear chat history');
+    }
+  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -171,22 +237,44 @@ const ChatPage = () => {
     <div className="h-[calc(100vh-200px)] flex flex-col bg-white rounded-lg shadow-sm border">
       {/* Chat Header */}
       <div className="border-b border-gray-200 p-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-            <Bot className="w-6 h-6 text-primary-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+              <Bot className="w-6 h-6 text-primary-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-900">AI Nutrition Assistant</h2>
+              <p className="text-sm text-gray-500">
+                Powered by 3 specialized AI agents
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold text-gray-900">AI Nutrition Assistant</h2>
-            <p className="text-sm text-gray-500">
-              Powered by 3 specialized AI agents
-            </p>
-          </div>
+          {/* Clear Chat Button */}
+          <button
+            onClick={clearChatHistory}
+            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Clear chat history"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Clear</span>
+          </button>
         </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
+        {/* Loading history indicator */}
+        {isLoadingHistory && (
+          <div className="flex justify-center items-center h-32">
+            <div className="flex items-center space-x-2 text-gray-500">
+              <Loader className="w-5 h-5 animate-spin" />
+              <span>Loading chat history...</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Messages */}
+        {!isLoadingHistory && messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}

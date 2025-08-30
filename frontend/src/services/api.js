@@ -47,6 +47,10 @@ export const authAPI = {
 export const chatAPI = {
   sendMessage: (message, context = {}) => 
     api.post('/chat', { message, context }),
+  getChatHistory: (limit = 50) => 
+    api.get(`/chat/history?limit=${limit}`),
+  clearChatHistory: () => 
+    api.delete('/chat/history'),
 };
 
 // Nutrition Calculator Agent API
