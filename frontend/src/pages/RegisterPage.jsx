@@ -94,12 +94,26 @@ const RegisterPage = () => {
       }))
     }
 
-    // Clear error when user starts typing
+    // Clear error when user starts typing and validate in real-time
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
         [name]: "",
       }))
+    }
+
+    // Real-time validation for specific fields
+    const newErrors = { ...errors }
+
+    if (name === "email" && value.trim()) {
+      if (!value.includes('@')) {
+        newErrors.email = "Email must contain @ sign"
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+        newErrors.email = "Please enter a valid email address"
+      } else {
+        newErrors.email = ""
+      }
+      setErrors(newErrors)
     }
   }
 
@@ -137,14 +151,18 @@ const RegisterPage = () => {
   const validateStep1 = () => {
     const newErrors = {}
 
+    // Name validation - only required check
     if (!formData.name.trim()) {
       newErrors.name = "Full name is required"
     }
 
-    if (!formData.email) {
+    // Email validation - must contain @ sign and proper format
+    if (!formData.email.trim()) {
       newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email"
+    } else if (!formData.email.includes('@')) {
+      newErrors.email = "Email must contain @ sign"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address"
     }
 
     if (!formData.password) {
@@ -296,6 +314,13 @@ const RegisterPage = () => {
                         id="name"
                         value={formData.name}
                         onChange={handleChange}
+                        onKeyPress={(e) => {
+                          // Allow only letters and spaces
+                          const char = e.key;
+                          if (!/[a-zA-Z\s]/.test(char)) {
+                            e.preventDefault();
+                          }
+                        }}
                         className={`w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${errors.name
                           ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
                           : "border-gray-200 hover:border-gray-300"
@@ -314,18 +339,18 @@ const RegisterPage = () => {
 
                   {/* Email */}
                   <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-3">
+                    <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Mail className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                       <input
                         type="email"
                         name="email"
                         id="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${errors.email
+                        className={`w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${errors.email
                           ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
                           : "border-gray-200 hover:border-gray-300"
                           }`}
