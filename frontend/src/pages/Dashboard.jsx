@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  MessageCircle, 
-  Beaker, 
-  BookOpen, 
+import {
+  MessageCircle,
+  BookOpen,
   BarChart3,
   TrendingUp,
   Target,
@@ -12,6 +11,7 @@ import {
   Activity
 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import FaviconIcon from '../components/FaviconIcon';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -47,7 +47,7 @@ const Dashboard = () => {
     {
       title: 'Analyze Food',
       description: 'Check nutritional content of your meals',
-      icon: Beaker,
+      icon: ({ className }) => <FaviconIcon className={className} />,
       href: '/nutrition',
       color: 'bg-green-500'
     },
@@ -202,14 +202,14 @@ const Dashboard = () => {
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="font-medium text-blue-900 mb-2">💡 Nutrition Tip</h3>
             <p className="text-sm text-blue-800">
-              Based on your recent intake, try adding more protein to your breakfast. 
+              Based on your recent intake, try adding more protein to your breakfast.
               Consider Greek yogurt or eggs to help you feel fuller longer.
             </p>
           </div>
           <div className="p-4 bg-green-50 rounded-lg border border-green-200">
             <h3 className="font-medium text-green-900 mb-2">🍽️ Recipe Suggestion</h3>
             <p className="text-sm text-green-800">
-              Perfect for your goals: Mediterranean Quinoa Bowl with grilled chicken. 
+              Perfect for your goals: Mediterranean Quinoa Bowl with grilled chicken.
               High in protein and packed with nutrients you need.
             </p>
           </div>

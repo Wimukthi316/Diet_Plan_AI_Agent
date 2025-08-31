@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Beaker, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import FaviconIcon from '../components/FaviconIcon';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -48,7 +49,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     const success = await login(formData.email, formData.password);
@@ -63,7 +64,7 @@ const LoginPage = () => {
         <div className="flex justify-center">
           <div className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-              <Beaker className="w-6 h-6 text-white" />
+              <FaviconIcon className="w-6 h-6" />
             </div>
             <span className="text-2xl font-bold gradient-text">Diet Plan AI</span>
           </div>

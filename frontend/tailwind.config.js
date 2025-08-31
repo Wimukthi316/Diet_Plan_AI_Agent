@@ -6,33 +6,6 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        border: "hsl(214.3 31.8% 91.4%)",
-        primary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-        },
-        secondary: {
-          50: '#fef7ff',
-          100: '#fdeeff',
-          200: '#fbdcfe',
-          300: '#f7b9fc',
-          400: '#f186f8',
-          500: '#e854ee',
-          600: '#d134d9',
-          700: '#b026bd',
-          800: '#922299',
-          900: '#771f7a',
-        }
-      },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui'],
       },

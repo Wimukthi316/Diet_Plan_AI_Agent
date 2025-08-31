@@ -1,16 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Beaker, 
-  Brain, 
-  Target, 
-  Users, 
-  Shield, 
+import {
+  Brain,
+  Target,
+  Users,
+  Shield,
   Zap,
   CheckCircle,
   ArrowRight,
   Star
 } from 'lucide-react';
+import FaviconIcon from '../components/FaviconIcon';
 
 const LandingPage = () => {
   const features = [
@@ -25,7 +25,7 @@ const LandingPage = () => {
       description: 'Get custom meal plans tailored to your health goals, dietary restrictions, and preferences.'
     },
     {
-      icon: Beaker,
+      icon: ({ className }) => <FaviconIcon className={className} />,
       title: 'Smart Recipe Finder',
       description: 'Discover healthy recipes that match your nutritional needs and taste preferences.'
     },
@@ -72,7 +72,7 @@ const LandingPage = () => {
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <Beaker className="w-5 h-5 text-white" />
+                <FaviconIcon className="w-5 h-5" />
               </div>
               <span className="text-xl font-bold gradient-text">Diet Plan AI</span>
             </div>
@@ -102,7 +102,7 @@ const LandingPage = () => {
               Assistant
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-gray-600">
-              Transform your diet with the power of AI. Get personalized nutrition analysis, 
+              Transform your diet with the power of AI. Get personalized nutrition analysis,
               smart recipe recommendations, and comprehensive diet tracking all in one platform.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
@@ -129,7 +129,7 @@ const LandingPage = () => {
               Advanced AI technology meets personalized nutrition guidance
             </p>
           </div>
-          
+
           <div className="mt-20 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
               <div key={feature.title} className="card-hover text-center">
@@ -159,7 +159,7 @@ const LandingPage = () => {
               Three specialized AI agents working together for your health
             </p>
           </div>
-          
+
           <div className="mt-20 grid grid-cols-1 gap-8 lg:grid-cols-3">
             {agents.map((agent, index) => (
               <div key={agent.name} className="card relative">
@@ -199,8 +199,8 @@ const LandingPage = () => {
               Join thousands of users who've already improved their health with AI-powered nutrition guidance.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Link 
-                to="/register" 
+              <Link
+                to="/register"
                 className="bg-white text-primary-600 hover:bg-primary-50 font-medium py-3 px-8 rounded-lg transition-colors duration-200 flex items-center space-x-2"
               >
                 <span>Get Started Free</span>
@@ -225,7 +225,7 @@ const LandingPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <Beaker className="w-5 h-5 text-white" />
+                <FaviconIcon className="w-5 h-5" />
               </div>
               <span className="text-xl font-bold text-white">Diet Plan AI</span>
             </div>
