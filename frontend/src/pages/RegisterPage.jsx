@@ -216,8 +216,8 @@ const RegisterPage = () => {
   ]
 
   return (
-    <div className="bg-white lg:flex lg:h-screen lg:overflow-hidden">
-      {/* Left Side - Image (40%) - Fixed */}
+    <div className="bg-white min-h-screen lg:flex lg:h-screen lg:overflow-hidden">
+      {/* Left Side - Image (40%) - Fixed on large screens, hidden on mobile */}
       <div className="hidden lg:flex lg:w-2/5 lg:h-screen lg:fixed lg:left-0 lg:top-0 relative overflow-hidden">
         <div className="absolute inset-0"></div>
         <img
@@ -238,16 +238,23 @@ const RegisterPage = () => {
         </div>
       </div>
 
-      {/* Right Side - Form (60%) - Scrollable */}
-      <div className="flex-1 lg:w-3/5 lg:h-screen lg:overflow-y-auto lg:ml-[40%] p-8">
+      {/* Right Side - Form - Responsive */}
+      <div className="w-full lg:w-3/5 lg:h-screen lg:overflow-y-auto lg:ml-[40%] p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-2xl mx-auto">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex justify-center mb-6 pt-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl flex items-center justify-center shadow-xl shadow-green-500/25">
+              <FaviconIcon className="w-8 h-8" />
+            </div>
+          </div>
+
           {/* Header */}
-          <div className="text-center mt-20 mb-6">
-            <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-green-800 via-emerald-800 to-teal-800 bg-clip-text text-transparent mb-3 tracking-tight" style={{ fontFamily: 'Merienda, cursive' }}>
+          <div className="text-center mt-4 lg:mt-20 mb-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-green-800 via-emerald-800 to-teal-800 bg-clip-text text-transparent mb-3 tracking-tight" style={{ fontFamily: 'Merienda, cursive' }}>
               Nutri - Your Diet Companion
             </h1>
-            <p className="text-xl text-black mt-12 mb-2 font-medium" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Create your personalized nutrition journey</p>
-            <p className="text-gray-500 text-sm" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+            <p className="text-lg sm:text-xl text-black mt-4 lg:mt-12 mb-2 font-medium px-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Create your personalized nutrition journey</p>
+            <p className="text-gray-500 text-sm px-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
               Already have an account?{" "}
               <Link
                 to="/login"
@@ -261,8 +268,8 @@ const RegisterPage = () => {
 
 
           {/* Form Container */}
-          <div className="bg-gray-100 backdrop-blur-xl shadow-3xl rounded-3xl border border-white/20 overflow-hidden">
-            <form onSubmit={handleSubmit} className="p-8">
+          <div className="bg-gray-100 backdrop-blur-xl shadow-3xl rounded-2xl lg:rounded-3xl border border-white/20 overflow-hidden mx-2 sm:mx-0">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 lg:p-8">
               {/* Step 1: Account Information */}
               {currentStep === 1 && (
                 <div className="space-y-6">
@@ -282,14 +289,14 @@ const RegisterPage = () => {
                       Full Name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <User className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                       <input
                         type="text"
                         name="name"
                         id="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${errors.name
+                        className={`w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${errors.name
                           ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
                           : "border-gray-200 hover:border-gray-300"
                           }`}
@@ -334,7 +341,7 @@ const RegisterPage = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {/* Password */}
                     <div>
                       <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-3">
@@ -469,7 +476,7 @@ const RegisterPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     {/* Age */}
                     <div>
                       <label htmlFor="profile.age" className="block text-sm font-semibold text-gray-700 mb-4">
@@ -572,7 +579,7 @@ const RegisterPage = () => {
                       <Heart className="w-5 h-5 text-green-500 mr-2" />
                       <label className="text-sm font-semibold text-gray-700">Dietary Preferences</label>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {dietaryOptions.map((option) => (
                         <label
                           key={option}
@@ -600,7 +607,7 @@ const RegisterPage = () => {
                       <Target className="w-5 h-5 text-emerald-500 mr-2" />
                       <label className="text-sm font-semibold text-gray-700">Health Goals</label>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {healthGoalOptions.map((goal) => (
                         <label
                           key={goal}
@@ -623,7 +630,7 @@ const RegisterPage = () => {
                   </div>
 
                   {/* Navigation Buttons */}
-                  <div className="flex gap-4 pt-6">
+                  <div className="flex flex-col sm:flex-row gap-4 pt-6">
                     <button
                       type="button"
                       onClick={prevStep}
@@ -653,6 +660,8 @@ const RegisterPage = () => {
               )}
             </form>
           </div>
+          {/* Bottom spacing for mobile */}
+          <div className="h-8 lg:h-0"></div>
         </div>
       </div>
     </div>
