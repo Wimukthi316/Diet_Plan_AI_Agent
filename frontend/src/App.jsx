@@ -36,7 +36,7 @@ function App() {
           <Route path="/" element={!isAuthenticated ? <LandingPage /> : <Navigate to="/dashboard" />} />
           <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
           <Route path="/register" element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />} />
-          
+
           {/* Protected routes */}
           <Route
             path="/dashboard"
@@ -110,7 +110,7 @@ function App() {
               )
             }
           />
-          
+
           {/* Catch all route */}
           <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
         </Routes>

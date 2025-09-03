@@ -1,12 +1,13 @@
 import React from 'react';
-import { Beaker, Search, Calculator, TrendingUp } from 'lucide-react';
+import { Search, Calculator, TrendingUp } from 'lucide-react';
+import FaviconIcon from '../components/FaviconIcon';
 
 const NutritionPage = () => {
   return (
     <div className="space-y-6">
       <div className="card">
         <div className="text-center">
-          <Beaker className="w-16 h-16 text-primary-600 mx-auto mb-4" />
+          <FaviconIcon className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Nutrition Analysis</h1>
           <p className="text-gray-600">
             Advanced nutritional analysis powered by AI and USDA database
