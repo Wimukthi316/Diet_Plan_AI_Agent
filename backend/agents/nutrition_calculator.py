@@ -1,15 +1,14 @@
 """
-Nutrition Calculator Agent - Simple and reliable food nutrition analysis
+Nutrition Calculator Agent - Using Nutritionix API for comprehensive food data
 """
-
-import json
-import re
-from typing import Dict, Any, Optional, Tuple
+import os
+import requests
+from typing import Dict, Any, Optional
 from backend.agents.base_agent import BaseAgent
-import logging
+import re
 
 class NutritionCalculatorAgent(BaseAgent):
-    """Agent specialized in nutritional analysis and calculations"""
+    """Agent specialized in nutritional analysis using Nutritionix API"""
     
     def __init__(self):
         super().__init__(
@@ -19,266 +18,254 @@ class NutritionCalculatorAgent(BaseAgent):
         )
         
         self.capabilities = [
-            "Food nutritional analysis",
+            "Food nutritional analysis via Nutritionix API",
             "Calorie calculation", 
-            "Nutrient breakdown",
-            "Portion size estimation"
+            "Comprehensive nutrient breakdown",
+            "Portion size estimation",
+            "Brand-specific food data"
         ]
         
-        # Comprehensive nutrition database for common foods (per 100g unless specified)
-        self.nutrition_db = {
-            # Proteins
-            'egg': {'calories': 155, 'protein': 13, 'carbs': 1.1, 'fat': 11, 'fiber': 0, 'sugar': 1.1, 'sodium': 124, 'unit_weight': 50},  # per egg
-            'chicken': {'calories': 165, 'protein': 31, 'carbs': 0, 'fat': 3.6, 'fiber': 0, 'sugar': 0, 'sodium': 74},
-            'beef': {'calories': 250, 'protein': 26, 'carbs': 0, 'fat': 15, 'fiber': 0, 'sugar': 0, 'sodium': 72},
-            'salmon': {'calories': 208, 'protein': 20, 'carbs': 0, 'fat': 12, 'fiber': 0, 'sugar': 0, 'sodium': 59},
-            'tuna': {'calories': 144, 'protein': 23, 'carbs': 0, 'fat': 5, 'fiber': 0, 'sugar': 0, 'sodium': 39},
-            'turkey': {'calories': 135, 'protein': 30, 'carbs': 0, 'fat': 1, 'fiber': 0, 'sugar': 0, 'sodium': 1060},
-            
-            # Fruits
-            'banana': {'calories': 89, 'protein': 1.1, 'carbs': 23, 'fat': 0.3, 'fiber': 2.6, 'sugar': 12, 'sodium': 1, 'unit_weight': 120},  # per banana
-            'apple': {'calories': 52, 'protein': 0.3, 'carbs': 14, 'fat': 0.2, 'fiber': 2.4, 'sugar': 10, 'sodium': 1, 'unit_weight': 180},  # per apple
-            'orange': {'calories': 47, 'protein': 0.9, 'carbs': 12, 'fat': 0.1, 'fiber': 2.4, 'sugar': 9, 'sodium': 0, 'unit_weight': 150},  # per orange
-            'strawberry': {'calories': 32, 'protein': 0.7, 'carbs': 8, 'fat': 0.3, 'fiber': 2, 'sugar': 4.9, 'sodium': 1},
-            'blueberry': {'calories': 57, 'protein': 0.7, 'carbs': 14, 'fat': 0.3, 'fiber': 2.4, 'sugar': 10, 'sodium': 1},
-            'avocado': {'calories': 160, 'protein': 2, 'carbs': 9, 'fat': 15, 'fiber': 7, 'sugar': 0.7, 'sodium': 7},
-            
-            # Vegetables
-            'broccoli': {'calories': 34, 'protein': 2.8, 'carbs': 7, 'fat': 0.4, 'fiber': 2.6, 'sugar': 1.5, 'sodium': 33},
-            'spinach': {'calories': 23, 'protein': 2.9, 'carbs': 3.6, 'fat': 0.4, 'fiber': 2.2, 'sugar': 0.4, 'sodium': 79},
-            'carrot': {'calories': 41, 'protein': 0.9, 'carbs': 10, 'fat': 0.2, 'fiber': 2.8, 'sugar': 4.7, 'sodium': 69},
-            'potato': {'calories': 77, 'protein': 2, 'carbs': 17, 'fat': 0.1, 'fiber': 2.2, 'sugar': 0.8, 'sodium': 6},
-            'tomato': {'calories': 18, 'protein': 0.9, 'carbs': 3.9, 'fat': 0.2, 'fiber': 1.2, 'sugar': 2.6, 'sodium': 5},
-            
-            # Grains & Carbs
-            'rice': {'calories': 130, 'protein': 2.7, 'carbs': 28, 'fat': 0.3, 'fiber': 0.4, 'sugar': 0.1, 'sodium': 1},
-            'bread': {'calories': 265, 'protein': 9, 'carbs': 49, 'fat': 3.2, 'fiber': 2.7, 'sugar': 5, 'sodium': 491},
-            'pasta': {'calories': 131, 'protein': 5, 'carbs': 25, 'fat': 1.1, 'fiber': 1.8, 'sugar': 0.6, 'sodium': 1},
-            'oats': {'calories': 389, 'protein': 17, 'carbs': 66, 'fat': 7, 'fiber': 11, 'sugar': 1, 'sodium': 2},
-            'quinoa': {'calories': 120, 'protein': 4.4, 'carbs': 22, 'fat': 1.9, 'fiber': 2.8, 'sugar': 0.9, 'sodium': 7},
-            
-            # Dairy
-            'milk': {'calories': 42, 'protein': 3.4, 'carbs': 5, 'fat': 1, 'fiber': 0, 'sugar': 5, 'sodium': 44},
-            'cheese': {'calories': 113, 'protein': 7, 'carbs': 1, 'fat': 9, 'fiber': 0, 'sugar': 1, 'sodium': 215},
-            'yogurt': {'calories': 59, 'protein': 10, 'carbs': 3.6, 'fat': 0.4, 'fiber': 0, 'sugar': 3.6, 'sodium': 36},
-            
-            # Nuts & Seeds
-            'almond': {'calories': 579, 'protein': 21, 'carbs': 22, 'fat': 50, 'fiber': 12, 'sugar': 4, 'sodium': 1},
-            'nuts': {'calories': 579, 'protein': 21, 'carbs': 22, 'fat': 50, 'fiber': 12, 'sugar': 4, 'sodium': 1},  # Default to almonds
+        # Nutritionix API configuration
+        self.nutritionix_app_id = os.getenv("NUTRITIONIX_APP_ID")
+        self.nutritionix_api_key = os.getenv("NUTRITIONIX_API_KEY")
+        self.nutritionix_url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
+        
+        self.headers = {
+            'x-app-id': self.nutritionix_app_id,
+            'x-app-key': self.nutritionix_api_key,
+            'Content-Type': 'application/json'
         }
     
     async def process_request(self, request: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Process nutrition-related requests"""
+        """Process nutrition analysis requests"""
         try:
             message = request.get("message", "").strip()
             
             if not message:
-                return {
-                    "agent": self.name,
-                    "response": "Please provide a food item for nutritional analysis.",
-                    "status": "error"
-                }
+                return await self._general_nutrition_response("", context)
             
-            # Extract food and quantity from message
-            food_name, quantity, unit = self._parse_food_request(message)
+            # Extract food query from message
+            food_query = self._extract_food_query(message)
             
-            if not food_name:
+            if food_query:
+                # Get nutrition data from Nutritionix API
+                nutrition_data = await self._get_nutritionix_data(food_query)
+                
+                if nutrition_data:
+                    response = self._format_nutrition_response(nutrition_data)
+                    return {
+                        "agent": self.name,
+                        "response": response,
+                        "food_analysis": nutrition_data,
+                        "status": "success"
+                    }
+                else:
+                    # Fallback to AI response if API fails
+                    return await self._general_nutrition_response(message, context)
+            else:
                 return await self._general_nutrition_response(message, context)
-            
-            # Get nutrition data
-            nutrition_data = self._get_nutrition_data(food_name, quantity, unit)
-            
-            # Format response
-            response = self._format_nutrition_response(nutrition_data)
-            
-            return {
-                "agent": self.name,
-                "response": response,
-                "nutrition_data": nutrition_data,
-                "status": "success"
-            }
-            
+                
         except Exception as e:
             self.logger.error(f"Error in nutrition calculator: {e}")
-            return {
-                "agent": self.name,
-                "response": "I encountered an error while analyzing the nutrition. Please try again.",
-                "status": "error"
-            }
+            return await self._general_nutrition_response(message, context)
     
-    def _parse_food_request(self, message: str) -> Tuple[Optional[str], float, str]:
-        """Parse food name, quantity, and unit from message"""
+    def _extract_food_query(self, message: str) -> Optional[str]:
+        """Extract food query from user message"""
         message_lower = message.lower()
         
-        # Find food name
-        food_name = None
-        for food in self.nutrition_db.keys():
-            if food in message_lower:
-                food_name = food
-                break
+        # Check for multi-food queries (contains "and" or commas)
+        if ('and' in message_lower or ',' in message) and any(word in message_lower for word in 
+                                                             ['had', 'ate', 'consumed', 'calculate', 'total']):
+            # This is a multi-food query, let AI handle it
+            return None
         
-        if not food_name:
-            return None, 0, "g"
+        # Common patterns for single food queries
+        patterns = [
+            r"analyze.*?(?:nutrition|nutrients).*?(?:in|of)\s+(.+?)(?:\?|$)",
+            r"(?:nutrition|nutrients|calories).*?(?:in|of)\s+(.+?)(?:\?|$)",
+            r"what.*?(?:nutrition|nutrients|calories).*?(.+?)(?:\?|$)",
+            r"(?:analyze|calculate|tell me about)\s+(.+?)(?:\?|$)",
+            r"(.+?)(?:\s+nutrition|\s+nutrients|\s+calories)(?:\?|$)",
+        ]
         
-        # Extract quantity
-        quantity, unit = self._extract_quantity(message_lower, food_name)
+        for pattern in patterns:
+            match = re.search(pattern, message_lower)
+            if match:
+                food_query = match.group(1).strip()
+                # Clean up common words
+                food_query = re.sub(r'\b(the|a|an|some|of|in)\b', '', food_query).strip()
+                if food_query and len(food_query) > 2:
+                    return food_query
         
-        return food_name, quantity, unit
+        # If no pattern matches, check if message looks like a simple food name
+        if len(message.split()) <= 4 and not any(word in message_lower for word in 
+                                                ['how', 'what', 'why', 'when', 'where', 'help']):
+            return message.strip()
+        
+        return None
     
-    def _extract_quantity(self, message: str, food_name: str) -> Tuple[float, str]:
-        """Extract quantity and unit from message"""
-        
-        # Handle text numbers
-        text_numbers = {
-            'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-            'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
-            'a': 1, 'an': 1, 'half': 0.5, 'quarter': 0.25
-        }
-        
-        for text_num, value in text_numbers.items():
-            if text_num in message:
-                if food_name in ['egg', 'banana', 'apple', 'orange'] and 'unit_weight' in self.nutrition_db[food_name]:
-                    return value * self.nutrition_db[food_name]['unit_weight'], 'g'
-                return value * 100, 'g'  # Default serving size
-        
-        # Look for numbers
-        number_matches = re.findall(r'(\d+(?:\.\d+)?)\s*([a-zA-Z]*)', message)
-        
-        for num_str, unit_str in number_matches:
-            num = float(num_str)
-            
-            # Handle units
-            if 'gram' in unit_str or unit_str == 'g':
-                return num, 'g'
-            elif 'cup' in unit_str:
-                return num * 240, 'g'  # 1 cup ≈ 240g
-            elif 'tablespoon' in unit_str or 'tbsp' in unit_str:
-                return num * 15, 'g'   # 1 tbsp ≈ 15g
-            elif 'teaspoon' in unit_str or 'tsp' in unit_str:
-                return num * 5, 'g'    # 1 tsp ≈ 5g
-            elif 'ounce' in unit_str or 'oz' in unit_str:
-                return num * 28.35, 'g'  # 1 oz ≈ 28.35g
-            elif 'pound' in unit_str or 'lb' in unit_str:
-                return num * 453.6, 'g'  # 1 lb ≈ 453.6g
-            else:
-                # Handle pieces
-                if food_name in ['egg', 'banana', 'apple', 'orange'] and 'unit_weight' in self.nutrition_db[food_name]:
-                    return num * self.nutrition_db[food_name]['unit_weight'], 'g'
-                return num * 100, 'g'  # Default serving
-        
-        # Default fallback
-        if food_name in ['egg', 'banana', 'apple', 'orange'] and 'unit_weight' in self.nutrition_db[food_name]:
-            return self.nutrition_db[food_name]['unit_weight'], 'g'  # One unit
-        return 100, 'g'  # Standard serving
-    
-    def _get_nutrition_data(self, food_name: str, quantity: float, unit: str) -> Dict[str, Any]:
-        """Get nutrition data for specified food and quantity"""
-        
-        if food_name not in self.nutrition_db:
-            # Use default values for unknown foods
-            base_nutrition = {
-                'calories': 100, 'protein': 5, 'carbs': 15, 'fat': 3,
-                'fiber': 2, 'sugar': 5, 'sodium': 50
+    async def _get_nutritionix_data(self, food_query: str) -> Optional[Dict[str, Any]]:
+        """Get nutrition data from Nutritionix API"""
+        try:
+            payload = {
+                "query": food_query,
+                "timezone": "US/Eastern"
             }
-        else:
-            base_nutrition = self.nutrition_db[food_name].copy()
-            # Remove unit_weight if it exists
-            base_nutrition.pop('unit_weight', None)
-        
-        # Calculate scaled nutrition based on quantity
-        if food_name in self.nutrition_db and 'unit_weight' in self.nutrition_db[food_name]:
-            # This food has per-unit nutrition data
-            if unit == 'g':
-                scale_factor = quantity / self.nutrition_db[food_name]['unit_weight']
+            
+            response = requests.post(
+                self.nutritionix_url,
+                headers=self.headers,
+                json=payload,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                foods = data.get('foods', [])
+                
+                if foods:
+                    food = foods[0]  # Get first result
+                    
+                    # Extract key nutrition data
+                    nutrition_data = {
+                        'food_name': food.get('food_name', food_query),
+                        'brand_name': food.get('brand_name'),
+                        'serving_qty': food.get('serving_qty', 1),
+                        'serving_unit': food.get('serving_unit', 'serving'),
+                        'serving_weight_grams': food.get('serving_weight_grams', 0),
+                        'calories': food.get('nf_calories', 0),
+                        'protein': food.get('nf_protein', 0),
+                        'carbs': food.get('nf_total_carbohydrate', 0),
+                        'fat': food.get('nf_total_fat', 0),
+                        'fiber': food.get('nf_dietary_fiber', 0),
+                        'sugar': food.get('nf_sugars', 0),
+                        'sodium': food.get('nf_sodium', 0),
+                        'cholesterol': food.get('nf_cholesterol', 0),
+                        'saturated_fat': food.get('nf_saturated_fat', 0),
+                        'photo_url': food.get('photo', {}).get('thumb') if food.get('photo') else None
+                    }
+                    
+                    return nutrition_data
+                    
             else:
-                scale_factor = quantity
-        else:
-            # Standard per-100g nutrition data
-            scale_factor = quantity / 100 if unit == 'g' else quantity
+                self.logger.warning(f"Nutritionix API error: {response.status_code}")
+                
+        except Exception as e:
+            self.logger.error(f"Error calling Nutritionix API: {e}")
         
-        # Scale all nutrients
-        scaled_nutrition = {}
-        for nutrient, value in base_nutrition.items():
-            scaled_nutrition[nutrient] = round(value * scale_factor, 1)
-        
-        return {
-            'food_name': food_name.title(),
-            'quantity': quantity,
-            'unit': unit,
-            'source': 'database',
-            **scaled_nutrition
-        }
+        return None
     
     def _format_nutrition_response(self, nutrition_data: Dict[str, Any]) -> str:
-        """Format nutrition data into a readable response"""
-        
+        """Format nutrition data into readable response"""
         food_name = nutrition_data['food_name']
-        quantity = nutrition_data['quantity']
-        unit = nutrition_data['unit']
+        serving = f"{nutrition_data['serving_qty']} {nutrition_data['serving_unit']}"
         
-        # Create header
-        if unit == 'g' and quantity >= 100:
-            quantity_str = f"{int(quantity)}g"
-        elif unit == 'g' and quantity < 100:
-            # Try to express in pieces if possible
-            original_food = food_name.lower()
-            if original_food in self.nutrition_db and 'unit_weight' in self.nutrition_db[original_food]:
-                pieces = quantity / self.nutrition_db[original_food]['unit_weight']
-                if pieces == int(pieces):
-                    quantity_str = f"{int(pieces)} {food_name.lower()}{'s' if pieces > 1 else ''}"
-                else:
-                    quantity_str = f"{quantity}g"
-            else:
-                quantity_str = f"{int(quantity)}g"
-        else:
-            quantity_str = f"{quantity} {unit}"
+        response = f"**🍎 Nutrition Analysis: {food_name.title()}**\n\n"
         
-        response = f"**🍽️ Nutrition Analysis for {quantity_str} of {food_name}:**\n\n"
+        if nutrition_data.get('brand_name'):
+            response += f"**Brand:** {nutrition_data['brand_name']}\n"
         
-        # Add nutrition facts
-        response += f"🔥 **Calories:** {nutrition_data.get('calories', 0)} kcal\n"
-        response += f"🥩 **Protein:** {nutrition_data.get('protein', 0)}g\n"
-        response += f"🍞 **Carbohydrates:** {nutrition_data.get('carbs', 0)}g\n"
-        response += f"🧈 **Fat:** {nutrition_data.get('fat', 0)}g\n"
-        response += f"🌾 **Fiber:** {nutrition_data.get('fiber', 0)}g\n"
-        response += f"🍯 **Sugar:** {nutrition_data.get('sugar', 0)}g\n"
-        response += f"🧂 **Sodium:** {nutrition_data.get('sodium', 0)}mg\n\n"
+        response += f"**Serving Size:** {serving}"
         
-        # Add quick health insights
-        response += "**💡 Quick Insights:**\n"
+        if nutrition_data.get('serving_weight_grams'):
+            response += f" ({nutrition_data['serving_weight_grams']:.0f}g)"
         
-        calories = nutrition_data.get('calories', 0)
-        protein = nutrition_data.get('protein', 0)
-        carbs = nutrition_data.get('carbs', 0)
-        fat = nutrition_data.get('fat', 0)
+        response += "\n\n**📊 Nutrition Facts:**\n"
+        response += f"🔥 **Calories:** {nutrition_data['calories']:.0f} kcal\n"
+        response += f"🥩 **Protein:** {nutrition_data['protein']:.1f}g\n"
+        response += f"🍞 **Carbohydrates:** {nutrition_data['carbs']:.1f}g\n"
+        response += f"🧈 **Fat:** {nutrition_data['fat']:.1f}g\n"
         
-        if calories > 0:
-            if protein / calories * 4 > 0.3:  # More than 30% protein
-                response += "• High in protein - great for muscle building! 💪\n"
-            if carbs / calories * 4 > 0.6:  # More than 60% carbs
-                response += "• Good source of energy from carbohydrates ⚡\n"
-            if fat / calories * 9 > 0.3:  # More than 30% fat
-                response += "• Contains healthy fats for nutrient absorption 🥑\n"
-            if nutrition_data.get('fiber', 0) > 3:
-                response += "• High in fiber - supports digestive health 🌱\n"
-            if calories < 100:
-                response += "• Low calorie option - great for weight management 📉\n"
+        if nutrition_data['fiber'] > 0:
+            response += f"🌾 **Fiber:** {nutrition_data['fiber']:.1f}g\n"
+        
+        if nutrition_data['sugar'] > 0:
+            response += f"🍯 **Sugar:** {nutrition_data['sugar']:.1f}g\n"
+        
+        if nutrition_data['sodium'] > 0:
+            response += f"🧂 **Sodium:** {nutrition_data['sodium']:.0f}mg\n"
+        
+        # Add health insights
+        response += "\n**💡 Health Insights:**\n"
+        
+        # Calorie density
+        weight = nutrition_data.get('serving_weight_grams', 100)
+        if weight > 0:
+            cal_density = nutrition_data['calories'] / weight * 100
+            if cal_density < 150:
+                response += "• Low calorie density - great for weight management\n"
+            elif cal_density > 400:
+                response += "• High calorie density - enjoy in moderation\n"
+        
+        # Protein content
+        protein_pct = (nutrition_data['protein'] * 4 / max(nutrition_data['calories'], 1)) * 100
+        if protein_pct > 20:
+            response += "• High protein content - excellent for muscle building\n"
+        elif protein_pct < 5:
+            response += "• Low protein content - consider pairing with protein sources\n"
+        
+        # Fiber content
+        if nutrition_data['fiber'] >= 3:
+            response += "• Good source of fiber - supports digestive health\n"
+        
+        # Sodium warning
+        if nutrition_data['sodium'] > 400:
+            response += "• High sodium content - monitor if watching salt intake\n"
+        
+        response += f"\n*Data provided by Nutritionix API*"
         
         return response
     
     async def _general_nutrition_response(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle general nutrition questions using AI"""
+        """Handle general nutrition questions with AI"""
         
-        prompt = f"""
-        Answer this nutrition question: {message}
+        if not message:
+            message = "Tell me about nutrition analysis and what you can help me with"
         
-        Provide accurate, science-based information that's helpful and easy to understand.
-        Use emojis and formatting to make the response engaging.
-        Keep the response concise but informative.
+        # Check if this is a multi-food calculation request
+        message_lower = message.lower()
+        is_multi_food = ('and' in message_lower or ',' in message) and any(word in message_lower for word in 
+                                                                           ['had', 'ate', 'consumed', 'calculate', 'total'])
         
-        If the user is asking about a specific food that you don't have data for, 
-        provide general nutritional guidance and suggest they try again with a more common food name.
-        """
+        if is_multi_food:
+            prompt = f"""
+            You are a nutrition expert and calculator. The user is asking about multiple foods they consumed.
+            
+            User's question: {message}
+            
+            Please:
+            1. Identify each food item and its quantity mentioned
+            2. Calculate nutrition for each item (calories, protein, carbs, fat)
+            3. Provide a clear breakdown for each food
+            4. Calculate and show the total nutrition summary
+            5. Use this format:
+            
+            **🍽️ Multi-Food Nutrition Analysis**
+            
+            **Individual Items:**
+            • [Food 1] → [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
+            • [Food 2] → [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
+            
+            **📊 Total Summary:**
+            🔥 **Total Calories:** [total] kcal
+            🥩 **Total Protein:** [total]g
+            🍞 **Total Carbs:** [total]g  
+            🧈 **Total Fat:** [total]g
+            
+            Use accurate nutrition data for common foods. Be precise with calculations.
+            """
+        else:
+            prompt = f"""
+            You are a nutrition expert. Answer this question: {message}
+            
+            Focus on:
+            - Accurate, science-based nutrition information
+            - Practical advice for healthy eating
+            - Food analysis and recommendations
+            - Calorie and nutrient information
+            
+            Keep responses informative but concise. Use emojis to make it engaging.
+            """
         
         try:
             response = await self.generate_response(prompt, context)
@@ -286,14 +273,14 @@ class NutritionCalculatorAgent(BaseAgent):
             return {
                 "agent": self.name,
                 "response": response,
-                "type": "general_nutrition",
+                "type": "multi_food_calculation" if is_multi_food else "general_nutrition",
                 "status": "success"
             }
         except Exception as e:
             self.logger.error(f"Error generating AI response: {e}")
             return {
                 "agent": self.name,
-                "response": "I can help you analyze the nutrition of common foods like eggs, chicken, bananas, apples, rice, and more. Try asking something like 'analyze two eggs' or 'nutrition in one banana'.",
+                "response": "I can help you analyze the nutrition content of foods! Try asking about specific foods like 'analyze nutrition in banana' or 'calories in chicken breast'.",
                 "status": "success"
             }
     
@@ -303,6 +290,6 @@ class NutritionCalculatorAgent(BaseAgent):
             "name": self.name,
             "role": self.role,
             "capabilities": self.capabilities,
-            "supported_foods": list(self.nutrition_db.keys()),
-            "protocols": self.communication_protocols
+            "protocols": self.communication_protocols,
+            "data_sources": ["Nutritionix API", "Google Gemini AI"]
         }
