@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 import os
 import logging
+from datetime import datetime
 from dotenv import load_dotenv
 
 from backend.models.database import init_database
@@ -307,8 +308,17 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
         "id": str(current_user.id),
         "email": current_user.email,
         "name": current_user.name,
-        "dietary_preferences": current_user.dietary_preferences,
-        "health_goals": current_user.health_goals
+        "profile": {
+            "age": current_user.profile.age,
+            "gender": current_user.profile.gender,
+            "weight": current_user.profile.weight,
+            "height": current_user.profile.height,
+            "activity_level": current_user.profile.activity_level,
+            "dietary_preferences": current_user.profile.dietary_preferences or [],
+            "allergies": current_user.profile.allergies or [],
+            "health_conditions": current_user.profile.health_conditions or [],
+            "health_goals": current_user.profile.health_goals or []
+        }
     }
 
 @app.put("/user/profile")
@@ -318,9 +328,38 @@ async def update_user_profile(
 ):
     """Update user profile"""
     try:
-        await current_user.update({"$set": profile_data})
-        return {"message": "Profile updated successfully"}
+        # Validate profile data
+        from backend.utils.security import validate_user_profile
+        validated_data = validate_user_profile(profile_data)
+        
+        # Update the nested profile fields
+        update_data = {}
+        for key, value in validated_data.items():
+            update_data[f"profile.{key}"] = value
+        
+        # Also update the updated_at timestamp
+        update_data["updated_at"] = datetime.utcnow()
+        
+        await current_user.update({"$set": update_data})
+        
+        # Return updated profile
+        updated_user = await User.get(current_user.id)
+        return {
+            "message": "Profile updated successfully",
+            "profile": {
+                "age": updated_user.profile.age,
+                "gender": updated_user.profile.gender,
+                "weight": updated_user.profile.weight,
+                "height": updated_user.profile.height,
+                "activity_level": updated_user.profile.activity_level,
+                "dietary_preferences": updated_user.profile.dietary_preferences or [],
+                "allergies": updated_user.profile.allergies or [],
+                "health_conditions": updated_user.profile.health_conditions or [],
+                "health_goals": updated_user.profile.health_goals or []
+            }
+        }
     except Exception as e:
+        logger.error(f"Error updating profile: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
