@@ -314,25 +314,55 @@ const ChatPage = () => {
               </div>
 
               {/* Message Content */}
-              <div className={`px-4 py-2 rounded-lg ${
-                message.type === 'user'
-                  ? 'bg-primary-600 text-white'
-                  : message.error
-                  ? 'bg-red-50 border border-red-200 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                <div className="whitespace-pre-wrap">
+              <div 
+                className={`px-4 py-2 rounded-lg ${
+                  message.type === 'user'
+                    ? 'bg-primary-600 text-white'
+                    : message.error
+                    ? 'bg-red-50 border border-red-200 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+                style={{
+                  backgroundColor: message.type === 'user' ? '#2563eb' : message.error ? '#fef2f2' : '#f3f4f6',
+                  color: message.type === 'user' ? '#ffffff' : message.error ? '#991b1b' : '#1f2937'
+                }}
+              >
+                <div 
+                  className={`whitespace-pre-wrap ${
+                    message.type === 'user' ? 'text-white' : 'text-gray-800'
+                  }`}
+                  style={{
+                    color: message.type === 'user' ? '#ffffff' : '#1f2937'
+                  }}
+                >
                   {message.content.split('**').map((part, index) => 
                     index % 2 === 1 ? (
-                      <strong key={index}>{part}</strong>
+                      <strong 
+                        key={index} 
+                        className={message.type === 'user' ? 'text-white font-bold' : 'font-bold'}
+                        style={{ color: message.type === 'user' ? '#ffffff' : '#1f2937', fontWeight: 'bold' }}
+                      >
+                        {part}
+                      </strong>
                     ) : (
-                      <span key={index}>{part}</span>
+                      <span 
+                        key={index} 
+                        className={message.type === 'user' ? 'text-white' : ''}
+                        style={{ color: message.type === 'user' ? '#ffffff' : '#1f2937' }}
+                      >
+                        {part}
+                      </span>
                     )
                   )}
                 </div>
-                <div className={`text-xs mt-1 ${
-                  message.type === 'user' ? 'text-primary-200' : 'text-gray-500'
-                }`}>
+                <div 
+                  className={`text-xs mt-1 ${
+                    message.type === 'user' ? 'text-white opacity-75' : 'text-gray-500'
+                  }`}
+                  style={{
+                    color: message.type === 'user' ? 'rgba(255, 255, 255, 0.75)' : '#6b7280'
+                  }}
+                >
                   {formatTimestamp(message.timestamp)}
                 </div>
               </div>
