@@ -169,6 +169,63 @@ async def login(credentials: dict):
         logger.error(f"Login error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during login")
 
+def format_response_for_history(response_data: dict) -> str:
+    """Format the multi-agent response for chat history storage"""
+    if not response_data:
+        return ""
+    
+    if response_data.get("error"):
+        return f"Sorry, I encountered an error: {response_data['error']}"
+    
+    content = ""
+    agent_name = "AI Assistant"
+    
+    # Get the primary agent name
+    if response_data.get("primary_agent"):
+        agent_names = {
+            'nutrition_calculator': 'Nutrition Calculator',
+            'recipe_finder': 'Recipe Finder', 
+            'diet_tracker': 'Diet Tracker'
+        }
+        agent_name = agent_names.get(response_data["primary_agent"], 'AI Assistant')
+    
+    # Add agent identifier
+    content += f"*Processed by: {agent_name}*\n\n"
+    
+    # Primary response
+    if response_data.get("primary_response"):
+        primary_resp = response_data["primary_response"]
+        if primary_resp.get("response"):
+            content += primary_resp["response"]
+        elif isinstance(primary_resp, str):
+            content += primary_resp
+        else:
+            # Try to extract meaningful content from structured data
+            if primary_resp.get("food_analysis"):
+                analysis = primary_resp["food_analysis"]
+                content += f"**Nutrition Analysis for {analysis.get('food_name', 'Food')}**\n\n"
+                content += f"🔥 **Calories:** {analysis.get('calories', 0)} kcal\n"
+                content += f"🥩 **Protein:** {analysis.get('protein', 0)}g\n"
+                content += f"🍞 **Carbs:** {analysis.get('carbs', 0)}g\n"
+                content += f"🧈 **Fat:** {analysis.get('fat', 0)}g\n"
+            elif primary_resp.get("recipes"):
+                content += "**Recipe Suggestions Found**\n\n"
+                for i, recipe in enumerate(primary_resp["recipes"][:3], 1):
+                    content += f"{i}. **{recipe.get('title', 'Recipe')}**\n"
+                    if recipe.get('ready_in_minutes'):
+                        content += f"   ⏱️ {recipe['ready_in_minutes']} minutes\n"
+                    content += "\n"
+            else:
+                content += str(primary_resp)
+    
+    # Add synthesis if available
+    if response_data.get("synthesis"):
+        if content and not content.endswith("\n\n"):
+            content += "\n\n---\n\n"
+        content += response_data["synthesis"]
+    
+    return content or "Response processed successfully"
+
 @app.post("/chat")
 async def chat_with_agents(
     message: dict, 
@@ -187,11 +244,15 @@ async def chat_with_agents(
         
         # Save chat interaction to history
         if response and user_message:
+            # Format the response for chat history storage
+            response_text = format_response_for_history(response)
+            agent_name = response.get("primary_agent", "Unknown")
+            
             await ChatMessage.save_chat_interaction(
                 user_id=str(current_user.id),
                 message=user_message,
-                response=response.get("response", ""),
-                agent_name=response.get("agent", "Unknown"),
+                response=response_text,
+                agent_name=agent_name,
                 metadata={
                     "status": response.get("status"),
                     "type": response.get("type", "chat")

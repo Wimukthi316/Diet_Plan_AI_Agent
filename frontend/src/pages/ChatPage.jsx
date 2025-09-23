@@ -28,26 +28,46 @@ const ChatPage = () => {
       setIsLoadingHistory(true);
       const response = await chatAPI.getChatHistory();
       
+      console.log('Chat history response:', response.data); // Debug log
+      
       if (response.data && response.data.history && response.data.history.length > 0) {
         // Convert history to message format
-        const historyMessages = response.data.history.reverse().map((item, index) => [
-          {
-            id: `${item.id}-user-${index}`,
-            type: 'user',
-            content: item.message,
-            timestamp: new Date(item.timestamp),
-            agent: item.agent
-          },
-          {
-            id: `${item.id}-ai-${index}`,
-            type: 'ai',
-            content: item.response,
-            timestamp: new Date(item.timestamp),
-            agent: item.agent
+        const historyMessages = response.data.history.reverse().map((item, index) => {
+          // Ensure we have valid data
+          if (!item.message && !item.response) {
+            console.warn('Invalid chat history item:', item);
+            return [];
           }
-        ]).flat();
+          
+          const messages = [];
+          
+          // Create user message if it exists
+          if (item.message && item.message.trim()) {
+            messages.push({
+              id: `${item.id}-user-${index}`,
+              type: 'user',
+              content: item.message,
+              timestamp: new Date(item.timestamp),
+              agent: item.agent
+            });
+          }
+          
+          // Create AI response message if it exists
+          if (item.response && item.response.trim()) {
+            messages.push({
+              id: `${item.id}-ai-${index}`,
+              type: 'ai',
+              content: item.response,
+              timestamp: new Date(item.timestamp),
+              agent: item.agent
+            });
+          }
+          
+          return messages;
+        }).flat().filter(msg => msg); // Remove any undefined/null messages
         
         setMessages(historyMessages);
+        console.log('Loaded messages:', historyMessages); // Debug log
       } else {
         // Show welcome message if no history
         setMessages([{
