@@ -5,6 +5,7 @@ import os
 import requests
 from typing import Dict, Any, Optional
 from backend.agents.base_agent import BaseAgent
+from backend.models.user import User
 import re
 
 class NutritionCalculatorAgent(BaseAgent):
@@ -217,10 +218,13 @@ class NutritionCalculatorAgent(BaseAgent):
         return response
     
     async def _general_nutrition_response(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle general nutrition questions with AI"""
+        """Handle general nutrition questions with AI and personalized user context"""
         
         if not message:
             message = "Tell me about nutrition analysis and what you can help me with"
+        
+        # Get user profile for personalized responses
+        user_profile = await self._get_user_profile(context.get("user_id"))
         
         # Check if this is a multi-food calculation request
         message_lower = message.lower()
@@ -255,16 +259,39 @@ class NutritionCalculatorAgent(BaseAgent):
             Use accurate nutrition data for common foods. Be precise with calculations.
             """
         else:
-            prompt = f"""
-            You are a nutrition expert. Answer this question: {message}
+            # Create personalized prompt based on user profile
+            user_context = ""
+            greeting = "👋 Hi there! "
             
-            Focus on:
-            - Accurate, science-based nutrition information
-            - Practical advice for healthy eating
-            - Food analysis and recommendations
-            - Calorie and nutrient information
+            if user_profile:
+                user_context = f"""
+                User Profile Context:
+                - Name: {user_profile.get('name', 'User')}
+                - Health Goals: {', '.join(user_profile.get('health_goals', [])) if user_profile.get('health_goals') else 'Not set'}
+                - Dietary Preferences: {', '.join(user_profile.get('dietary_preferences', [])) if user_profile.get('dietary_preferences') else 'None specified'}
+                - Activity Level: {user_profile.get('activity_level', 'Not set')}
+                - Age: {user_profile.get('age', 'Not set')}
+                - Weight: {user_profile.get('weight', 'Not set')} kg
+                - Allergies: {', '.join(user_profile.get('allergies', [])) if user_profile.get('allergies') else 'None'}
+                
+                """
+                greeting = f"👋 Hi {user_profile.get('name', 'there')}! "
+            
+            prompt = f"""
+            {user_context}
+            You are a nutrition expert helping this user. Answer their question: {message}
+            
+            Start your response with: "{greeting}"
+            
+            Consider their personal profile when giving advice. Focus on:
+            - Accurate, science-based nutrition information tailored to their goals
+            - Practical advice considering their dietary preferences and restrictions
+            - Food analysis and recommendations relevant to their health goals
+            - Calorie and nutrient information appropriate for their profile
             
             Keep responses informative but concise. Use emojis to make it engaging.
+            Be personal and reference their goals/preferences when relevant.
+            If they haven't set up their profile completely, encourage them to update it for better personalized advice.
             """
         
         try:
@@ -278,11 +305,37 @@ class NutritionCalculatorAgent(BaseAgent):
             }
         except Exception as e:
             self.logger.error(f"Error generating AI response: {e}")
+            fallback_greeting = f"Hi {user_profile.get('name', 'there')}! " if user_profile and user_profile.get('name') else "Hi there! "
             return {
                 "agent": self.name,
-                "response": "I can help you analyze the nutrition content of foods! Try asking about specific foods like 'analyze nutrition in banana' or 'calories in chicken breast'.",
+                "response": f"{fallback_greeting}I can help you analyze the nutrition content of foods! Try asking about specific foods like 'analyze nutrition in banana' or 'calories in chicken breast'.",
                 "status": "success"
             }
+    
+    async def _get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile information for personalized responses"""
+        try:
+            if not user_id:
+                return None
+                
+            user = await User.get(user_id)
+            if not user:
+                return None
+            
+            return {
+                "name": user.name,
+                "health_goals": user.profile.health_goals or [],
+                "dietary_preferences": user.profile.dietary_preferences or [],
+                "activity_level": user.profile.activity_level,
+                "age": user.profile.age,
+                "weight": user.profile.weight,
+                "height": user.profile.height,
+                "allergies": user.profile.allergies or [],
+                "gender": user.profile.gender
+            }
+        except Exception as e:
+            self.logger.error(f"Error fetching user profile: {e}")
+            return None
     
     def get_agent_description(self) -> Dict[str, Any]:
         """Get agent description and capabilities"""

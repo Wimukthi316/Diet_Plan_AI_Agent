@@ -1,7 +1,6 @@
 """
-Diet Tracker Agent - Comprehensive diet tracking and progress analysis with chat history
+Diet Tracker Agent - Streamlined diet tracking and progress analysis
 """
-
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
@@ -10,7 +9,7 @@ from backend.models.nutrition_log import NutritionLog
 from backend.models.user import User
 
 class DietTrackerAgent(BaseAgent):
-    """Agent specialized in diet tracking, progress analysis, and behavioral insights"""
+    """Agent specialized in diet tracking, progress monitoring, and behavioral insights"""
     
     def __init__(self):
         super().__init__(
@@ -20,12 +19,8 @@ class DietTrackerAgent(BaseAgent):
         )
         
         self.capabilities = [
-            "Daily nutrition tracking",
-            "Progress analysis",
-            "Goal monitoring",
-            "Trend identification",
-            "Behavioral insights",
-            "Recommendation generation",
+            "Daily nutrition tracking", "Progress analysis", "Goal monitoring",
+            "Trend identification", "Behavioral insights", "Recommendation generation",
             "Weekly/monthly summaries"
         ]
     
@@ -38,19 +33,19 @@ class DietTrackerAgent(BaseAgent):
             if not message:
                 return await self._provide_tracking_overview(user_id, context)
             
-            # Determine request type based on message content
-            if any(keyword in message for keyword in ["track", "daily", "progress", "today"]):
-                return await self._analyze_daily_progress(user_id, context)
-            elif any(keyword in message for keyword in ["week", "weekly", "7 days"]):
-                return await self._analyze_weekly_progress(user_id, context)
-            elif any(keyword in message for keyword in ["month", "monthly", "30 days"]):
-                return await self._analyze_monthly_progress(user_id, context)
-            elif any(keyword in message for keyword in ["goal", "target", "objective"]):
+            # Route to appropriate analysis method
+            if any(kw in message for kw in ["track", "daily", "progress", "today"]):
+                return await self._analyze_progress(user_id, context, "daily")
+            elif any(kw in message for kw in ["week", "weekly", "7 days"]):
+                return await self._analyze_progress(user_id, context, "weekly")
+            elif any(kw in message for kw in ["month", "monthly", "30 days"]):
+                return await self._analyze_progress(user_id, context, "monthly")
+            elif any(kw in message for kw in ["goal", "target", "objective"]):
                 return await self._analyze_goals(user_id, context)
-            elif any(keyword in message for keyword in ["trend", "pattern", "habit"]):
+            elif any(kw in message for kw in ["trend", "pattern", "habit"]):
                 return await self._analyze_trends(user_id, context)
-            elif any(keyword in message for keyword in ["log", "add", "record"]):
-                return await self._log_food_intake(request, context)
+            elif any(kw in message for kw in ["log", "add", "record"]):
+                return await self._log_food_helper(message, context)
             else:
                 return await self._general_tracking_response(message, user_id, context)
                 
@@ -63,222 +58,145 @@ class DietTrackerAgent(BaseAgent):
             }
     
     async def _provide_tracking_overview(self, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Provide comprehensive tracking overview"""
+        """Provide comprehensive tracking overview with personalized greeting"""
+        recent_logs = await self._get_nutrition_logs(user_id, days=7)
+        today_logs = await self._get_nutrition_logs(user_id, days=1)
+        user_profile = await self._get_user_profile(user_id)
         
-        # Get recent data
-        recent_logs = await self._get_recent_nutrition_logs(user_id, days=7)
-        today_logs = await self._get_today_nutrition_logs(user_id)
+        today_totals = self._calculate_totals(today_logs)
         
-        # Calculate basic stats
-        total_calories_today = sum(log.calories for log in today_logs)
-        total_protein_today = sum(log.protein for log in today_logs)
-        
-        # Get chat history for personalized insights
-        chat_history = await self._get_chat_history(user_id)
-        
-        response = f"**📊 Diet Tracking Overview for {datetime.now().strftime('%B %d, %Y')}**\n\n"
+        # Personalized greeting
+        name = user_profile.get('name', 'there') if user_profile else 'there'
+        response = f"**📊 Diet Tracking Overview for {name} - {datetime.now().strftime('%B %d, %Y')}**\n\n"
         
         if today_logs:
             response += f"**Today's Progress:**\n"
-            response += f"🔥 Calories: {total_calories_today} kcal\n"
-            response += f"🥩 Protein: {total_protein_today}g\n"
+            response += f"🔥 Calories: {today_totals['calories']:.0f} kcal\n"
+            response += f"🥩 Protein: {today_totals['protein']:.1f}g\n"
             response += f"📝 Meals logged: {len(today_logs)}\n\n"
         else:
-            response += "**Today's Progress:**\n"
-            response += "No meals logged yet today. Start tracking your nutrition!\n\n"
+            response += "**Today's Progress:**\nNo meals logged yet today. Start tracking!\n\n"
         
         if recent_logs:
-            avg_calories = sum(log.calories for log in recent_logs) / len(recent_logs)
-            response += f"**7-Day Average:**\n"
-            response += f"📈 Daily calories: {avg_calories:.0f} kcal\n"
-            response += f"📊 Total entries: {len(recent_logs)}\n\n"
+            avg_calories = sum(log.calories for log in recent_logs) / max(1, len(set(log.date.date() for log in recent_logs)))
+            response += f"**7-Day Average:** {avg_calories:.0f} kcal/day ({len(recent_logs)} entries)\n\n"
         
-        # Add personalized insights based on chat history
-        if chat_history:
-            insights_prompt = f"""
-            Based on this user's diet tracking data and chat history, provide 3 personalized insights:
+        # Generate personalized AI insights
+        if recent_logs:
+            user_context = ""
+            if user_profile:
+                goals = ', '.join(user_profile.get('health_goals', [])) if user_profile.get('health_goals') else 'Not set'
+                user_context = f" (Goals: {goals})"
             
-            Today's data: {total_calories_today} calories, {total_protein_today}g protein
-            Recent logs: {len(recent_logs)} entries in 7 days
-            Chat history: {chat_history[-5:] if len(chat_history) > 5 else chat_history}
-            
-            Provide encouraging, actionable insights in bullet points.
-            """
-            
-            insights = await self.generate_response(insights_prompt, context)
+            insights = await self._generate_insights(
+                f"User {name} tracking overview: {today_totals['calories']:.0f} calories today, {len(recent_logs)} entries in 7 days{user_context}",
+                context, "overview"
+            )
             response += f"**💡 Personalized Insights:**\n{insights}\n\n"
         
-        response += "**What I can help you with:**\n"
-        response += "• Track daily nutrition progress\n"
-        response += "• Analyze weekly/monthly trends\n"
-        response += "• Monitor your goals\n"
-        response += "• Identify eating patterns\n"
-        response += "• Provide behavioral insights\n\n"
-        response += "Try asking: *'Show my weekly progress'* or *'What are my eating patterns?'*"
+        response += "**Available Commands:**\n• 'Show daily/weekly/monthly progress'\n• 'Analyze my goals'\n• 'What are my eating patterns?'"
         
         return {
             "agent": self.name,
             "response": response,
             "tracking_data": {
-                "today_calories": total_calories_today,
-                "today_protein": total_protein_today,
+                "today_calories": today_totals['calories'],
+                "today_protein": today_totals['protein'],
                 "meals_today": len(today_logs),
                 "recent_entries": len(recent_logs)
             },
             "status": "success"
         }
     
-    async def _analyze_daily_progress(self, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze today's nutrition progress"""
+    async def _analyze_progress(self, user_id: str, context: Dict[str, Any], period: str) -> Dict[str, Any]:
+        """Unified progress analysis for daily/weekly/monthly periods"""
+        days_map = {"daily": 1, "weekly": 7, "monthly": 30}
+        days = days_map.get(period, 7)
         
-        today_logs = await self._get_today_nutrition_logs(user_id)
-        yesterday_logs = await self._get_nutrition_logs_for_date(user_id, datetime.now() - timedelta(days=1))
-        
-        if not today_logs:
-            return {
-                "agent": self.name,
-                "response": "**📅 Daily Progress - No Data Yet**\n\nYou haven't logged any meals today. Start tracking your nutrition to see your progress!\n\n**Quick Tips:**\n• Log your breakfast to start the day right\n• Track portion sizes for accurate data\n• Include snacks and beverages\n\nTry saying: *'Log my breakfast'* or ask about nutrition in specific foods.",
-                "status": "no_data"
-            }
-        
-        # Calculate totals
-        totals = self._calculate_nutrition_totals(today_logs)
-        yesterday_totals = self._calculate_nutrition_totals(yesterday_logs) if yesterday_logs else None
-        
-        # Format detailed analysis
-        response = f"**📅 Daily Progress - {datetime.now().strftime('%A, %B %d')}**\n\n"
-        
-        response += f"**🍽️ Today's Intake:**\n"
-        response += f"🔥 Calories: {totals['calories']} kcal\n"
-        response += f"🥩 Protein: {totals['protein']}g\n"
-        response += f"🍞 Carbs: {totals['carbs']}g\n"
-        response += f"🧈 Fat: {totals['fat']}g\n"
-        response += f"🌾 Fiber: {totals['fiber']}g\n"
-        response += f"🧂 Sodium: {totals['sodium']}mg\n\n"
-        
-        # Compare with yesterday if available
-        if yesterday_totals:
-            cal_diff = totals['calories'] - yesterday_totals['calories']
-            cal_trend = "📈" if cal_diff > 0 else "📉" if cal_diff < 0 else "➡️"
-            response += f"**📊 vs Yesterday:**\n"
-            response += f"{cal_trend} Calories: {cal_diff:+.0f} kcal\n"
-            response += f"🥩 Protein: {totals['protein'] - yesterday_totals['protein']:+.1f}g\n\n"
-        
-        # Meal breakdown
-        meal_breakdown = self._group_logs_by_meal(today_logs)
-        if meal_breakdown:
-            response += f"**🍽️ Meals Today ({len(today_logs)} entries):**\n"
-            for meal_type, logs in meal_breakdown.items():
-                meal_calories = sum(log.calories for log in logs)
-                response += f"• {meal_type.title()}: {meal_calories} kcal ({len(logs)} items)\n"
-            response += "\n"
-        
-        # Generate AI insights
-        insights_prompt = f"""
-        Analyze this daily nutrition data and provide insights:
-        
-        Today's nutrition: {json.dumps(totals, indent=2)}
-        Yesterday's nutrition: {json.dumps(yesterday_totals, indent=2) if yesterday_totals else 'No data'}
-        Meals: {list(meal_breakdown.keys()) if meal_breakdown else 'None logged'}
-        
-        Provide 3-4 actionable insights about their nutrition today.
-        """
-        
-        insights = await self.generate_response(insights_prompt, context)
-        response += f"**💡 Daily Insights:**\n{insights}"
-        
-        return {
-            "agent": self.name,
-            "response": response,
-            "daily_data": totals,
-            "status": "success"
-        }
-    
-    async def _analyze_weekly_progress(self, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze weekly nutrition trends"""
-        
-        logs = await self._get_recent_nutrition_logs(user_id, days=7)
+        logs = await self._get_nutrition_logs(user_id, days=days)
         
         if not logs:
             return {
                 "agent": self.name,
-                "response": "**📊 Weekly Progress - No Data**\n\nNo nutrition data found for the past 7 days. Start logging your meals to see weekly trends!\n\n**Get Started:**\n• Log today's meals\n• Track consistently for better insights\n• Ask me to analyze specific foods",
+                "response": f"**📊 {period.title()} Progress - No Data**\n\nNo nutrition data found. Start logging your meals to see {period} trends!",
                 "status": "no_data"
             }
         
-        # Group by day and calculate daily totals
-        daily_data = self._group_logs_by_day(logs)
+        # Calculate statistics based on period
+        if period == "daily":
+            return await self._daily_analysis(logs, context)
+        elif period == "weekly":
+            return await self._weekly_analysis(logs, context)
+        else:  # monthly
+            return await self._monthly_analysis(logs, context)
+    
+    async def _daily_analysis(self, logs: List[NutritionLog], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze daily progress"""
+        totals = self._calculate_totals(logs)
+        meal_breakdown = self._group_by_meal(logs)
         
-        # Calculate weekly averages
+        response = f"**📅 Daily Progress - {datetime.now().strftime('%A, %B %d')}**\n\n"
+        response += f"**🍽️ Today's Intake:**\n"
+        response += f"🔥 Calories: {totals['calories']:.0f} kcal\n"
+        response += f"🥩 Protein: {totals['protein']:.1f}g | 🍞 Carbs: {totals['carbs']:.1f}g | 🧈 Fat: {totals['fat']:.1f}g\n\n"
+        
+        if meal_breakdown:
+            response += f"**🍽️ Meals ({len(logs)} entries):**\n"
+            for meal, meal_logs in meal_breakdown.items():
+                meal_cals = sum(log.calories for log in meal_logs)
+                response += f"• {meal.title()}: {meal_cals:.0f} kcal ({len(meal_logs)} items)\n"
+            response += "\n"
+        
+        insights = await self._generate_insights(
+            f"Daily nutrition: {json.dumps(totals)} with {len(logs)} entries", 
+            context, "daily"
+        )
+        response += f"**💡 Daily Insights:**\n{insights}"
+        
+        return {"agent": self.name, "response": response, "daily_data": totals, "status": "success"}
+    
+    async def _weekly_analysis(self, logs: List[NutritionLog], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze weekly progress"""
+        daily_data = self._group_by_day(logs)
         total_days = len(daily_data)
+        
+        if total_days == 0:
+            return {"agent": self.name, "response": "No weekly data available.", "status": "no_data"}
+        
         weekly_avg = {
             'calories': sum(day['calories'] for day in daily_data.values()) / total_days,
-            'protein': sum(day['protein'] for day in daily_data.values()) / total_days,
-            'carbs': sum(day['carbs'] for day in daily_data.values()) / total_days,
-            'fat': sum(day['fat'] for day in daily_data.values()) / total_days
+            'protein': sum(day['protein'] for day in daily_data.values()) / total_days
         }
         
         response = f"**📊 Weekly Progress ({total_days} days tracked)**\n\n"
-        
         response += f"**📈 Daily Averages:**\n"
         response += f"🔥 Calories: {weekly_avg['calories']:.0f} kcal/day\n"
-        response += f"🥩 Protein: {weekly_avg['protein']:.1f}g/day\n"
-        response += f"🍞 Carbs: {weekly_avg['carbs']:.1f}g/day\n"
-        response += f"🧈 Fat: {weekly_avg['fat']:.1f}g/day\n\n"
+        response += f"🥩 Protein: {weekly_avg['protein']:.1f}g/day\n\n"
         
-        # Show daily breakdown
         response += f"**📅 Daily Breakdown:**\n"
         for date_str, data in sorted(daily_data.items()):
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-            day_name = date_obj.strftime('%A')
+            day_name = datetime.strptime(date_str, '%Y-%m-%d').strftime('%A')
             response += f"• {day_name}: {data['calories']:.0f} kcal ({data['entries']} entries)\n"
         
-        response += "\n"
-        
-        # Generate weekly insights
-        insights_prompt = f"""
-        Analyze this weekly nutrition data and identify patterns:
-        
-        Weekly averages: {json.dumps(weekly_avg, indent=2)}
-        Daily data: {json.dumps(daily_data, indent=2)}
-        Total tracking days: {total_days}/7
-        
-        Provide insights about:
-        1. Consistency patterns
-        2. Nutritional balance
-        3. Areas for improvement
-        4. Positive trends
-        """
-        
-        insights = await self.generate_response(insights_prompt, context)
-        response += f"**💡 Weekly Insights:**\n{insights}"
+        insights = await self._generate_insights(
+            f"Weekly data: {json.dumps(weekly_avg)} over {total_days} days",
+            context, "weekly"
+        )
+        response += f"\n**💡 Weekly Insights:**\n{insights}"
         
         return {
-            "agent": self.name,
-            "response": response,
-            "weekly_data": {
-                "averages": weekly_avg,
-                "daily_breakdown": daily_data,
-                "tracking_consistency": f"{total_days}/7 days"
-            },
+            "agent": self.name, "response": response,
+            "weekly_data": {"averages": weekly_avg, "tracking_consistency": f"{total_days}/7 days"},
             "status": "success"
         }
     
-    async def _analyze_monthly_progress(self, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze monthly nutrition trends"""
-        
-        logs = await self._get_recent_nutrition_logs(user_id, days=30)
-        
-        if not logs:
-            return {
-                "agent": self.name,
-                "response": "**📊 Monthly Progress - No Data**\n\nNo nutrition data found for the past 30 days. Start logging consistently to see monthly trends!",
-                "status": "no_data"
-            }
-        
-        # Calculate monthly statistics
+    async def _monthly_analysis(self, logs: List[NutritionLog], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze monthly progress"""
+        unique_days = len(set(log.date.date() for log in logs))
         total_entries = len(logs)
-        unique_days = len(set(log.date.strftime('%Y-%m-%d') for log in logs))
+        
+        if unique_days == 0:
+            return {"agent": self.name, "response": "No monthly data available.", "status": "no_data"}
         
         monthly_avg = {
             'calories': sum(log.calories for log in logs) / unique_days,
@@ -288,290 +206,271 @@ class DietTrackerAgent(BaseAgent):
         
         response = f"**📊 Monthly Progress (30 days)**\n\n"
         response += f"**📈 Summary:**\n"
-        response += f"📝 Total entries: {total_entries}\n"
-        response += f"📅 Days tracked: {unique_days}/30\n"
-        response += f"🔥 Daily avg calories: {monthly_avg['calories']:.0f} kcal\n"
-        response += f"🥩 Daily avg protein: {monthly_avg['protein']:.1f}g\n"
-        response += f"📊 Avg entries/day: {monthly_avg['entries_per_day']:.1f}\n\n"
+        response += f"📝 Total entries: {total_entries} | 📅 Days tracked: {unique_days}/30\n"
+        response += f"🔥 Daily avg: {monthly_avg['calories']:.0f} kcal | 🥩 Protein: {monthly_avg['protein']:.1f}g\n\n"
         
-        # Weekly comparison
-        weeks_data = self._analyze_weekly_trends(logs)
-        if len(weeks_data) >= 2:
-            response += f"**📊 Weekly Trends:**\n"
-            for i, week in enumerate(weeks_data):
-                response += f"• Week {i+1}: {week['avg_calories']:.0f} kcal/day\n"
-            response += "\n"
-        
-        # Generate monthly insights
-        insights_prompt = f"""
-        Analyze this monthly nutrition data:
-        
-        Monthly averages: {json.dumps(monthly_avg, indent=2)}
-        Tracking consistency: {unique_days}/30 days
-        Total entries: {total_entries}
-        Weekly trends: {json.dumps(weeks_data, indent=2) if weeks_data else 'Insufficient data'}
-        
-        Provide comprehensive monthly insights about progress, consistency, and recommendations.
-        """
-        
-        insights = await self.generate_response(insights_prompt, context)
+        insights = await self._generate_insights(
+            f"Monthly data: {json.dumps(monthly_avg)} over {unique_days} days",
+            context, "monthly"
+        )
         response += f"**💡 Monthly Insights:**\n{insights}"
         
         return {
-            "agent": self.name,
-            "response": response,
-            "monthly_data": {
-                "averages": monthly_avg,
-                "tracking_days": f"{unique_days}/30",
-                "total_entries": total_entries
-            },
+            "agent": self.name, "response": response,
+            "monthly_data": {"averages": monthly_avg, "tracking_days": f"{unique_days}/30"},
             "status": "success"
         }
     
     async def _analyze_goals(self, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze progress toward nutrition goals"""
+        """Analyze progress toward user's personal nutrition goals"""
+        logs = await self._get_nutrition_logs(user_id, days=7)
+        user_profile = await self._get_user_profile(user_id)
         
-        # Get user data and recent logs
-        recent_logs = await self._get_recent_nutrition_logs(user_id, days=7)
+        # Get personalized goals based on user profile
+        personalized_goals = await self._calculate_personalized_goals(user_profile)
         
-        # Default goals (could be customized per user)
-        daily_goals = {
-            'calories': 2000,
-            'protein': 150,
-            'carbs': 250,
-            'fat': 65,
-            'fiber': 25
-        }
+        # Use personalized goals or defaults
+        daily_goals = personalized_goals if personalized_goals else {'calories': 2000, 'protein': 150, 'carbs': 250, 'fat': 65}
         
-        if not recent_logs:
-            response = f"**🎯 Goal Analysis - No Recent Data**\n\n"
-            response += f"**Daily Targets:**\n"
-            response += f"🔥 Calories: {daily_goals['calories']} kcal\n"
-            response += f"🥩 Protein: {daily_goals['protein']}g\n"
-            response += f"🍞 Carbs: {daily_goals['carbs']}g\n"
-            response += f"🧈 Fat: {daily_goals['fat']}g\n"
-            response += f"🌾 Fiber: {daily_goals['fiber']}g\n\n"
-            response += "Start logging your meals to track progress toward these goals!"
+        # Create personalized response header
+        name = user_profile.get('name', 'User') if user_profile else 'User'
+        health_goals = user_profile.get('health_goals', []) if user_profile else []
+        
+        if not logs:
+            response = f"**🎯 Goal Analysis for {name}**\n\n"
+            
+            if health_goals:
+                response += f"**Your Health Goals:** {', '.join(health_goals)}\n\n"
+            
+            response += f"**Personalized Daily Targets:**\n"
+            for nutrient, goal in daily_goals.items():
+                response += f"🔥 {nutrient.title()}: {goal} {'kcal' if nutrient == 'calories' else 'g'}\n"
+            response += "\nStart logging your meals to track progress toward your goals!"
+            
+            if user_profile:
+                weight = user_profile.get('weight')
+                activity = user_profile.get('activity_level')
+                if weight and activity:
+                    response += f"\n💡 *Goals calculated based on your profile: {weight}kg, {activity} activity level*"
+            
+            return {"agent": self.name, "response": response, "status": "no_data"}
+        
+        daily_data = self._group_by_day(logs)
+        avg_daily = {k: sum(day[k] for day in daily_data.values()) / len(daily_data) for k in daily_goals.keys()}
+        
+        response = f"**🎯 Goal Analysis for {name} (7-day average)**\n\n"
+        
+        if health_goals:
+            response += f"**Your Health Goals:** {', '.join(health_goals)}\n\n"
+        
+        response += f"**Progress Toward Your Targets:**\n"
+        for nutrient, goal in daily_goals.items():
+            current = avg_daily[nutrient]
+            percentage = (current / goal) * 100
+            status = "🎯" if 90 <= percentage <= 110 else "📈" if percentage < 90 else "📉"
+            response += f"{status} **{nutrient.title()}:** {current:.0f}/{goal} ({percentage:.0f}%)\n"
+        
+        # Add goal-specific insights
+        goal_context = f"User {name} with goals: {', '.join(health_goals) if health_goals else 'general health'}"
+        insights = await self._generate_insights(
+            f"{goal_context}. Current progress: {json.dumps(avg_daily)} vs personalized targets {json.dumps(daily_goals)}",
+            context, "goals"
+        )
+        response += f"\n**💡 Personalized Goal Insights:**\n{insights}"
+        
+        return {"agent": self.name, "response": response, "goal_data": {"targets": daily_goals, "current_averages": avg_daily, "health_goals": health_goals}, "status": "success"}
+    
+    async def _calculate_personalized_goals(self, user_profile: Optional[Dict[str, Any]]) -> Optional[Dict[str, float]]:
+        """Calculate personalized nutrition goals based on user profile"""
+        if not user_profile:
+            return None
+        
+        age = user_profile.get('age')
+        weight = user_profile.get('weight')  # kg
+        height = user_profile.get('height')  # cm
+        gender = user_profile.get('gender')
+        activity_level = user_profile.get('activity_level')
+        health_goals = user_profile.get('health_goals', [])
+        
+        # Need at least weight and activity level for calculation
+        if not weight or not activity_level:
+            return None
+        
+        try:
+            # Calculate BMR using Mifflin-St Jeor equation
+            if gender and gender.lower() == 'female':
+                bmr = 10 * weight + 6.25 * (height or 165) - 5 * (age or 25) - 161
+            else:  # male or unspecified
+                bmr = 10 * weight + 6.25 * (height or 175) - 5 * (age or 25) + 5
+            
+            # Activity multipliers
+            activity_multipliers = {
+                'sedentary': 1.2,
+                'lightly_active': 1.375,
+                'moderately_active': 1.55,
+                'very_active': 1.725,
+                'extremely_active': 1.9
+            }
+            
+            multiplier = activity_multipliers.get(activity_level, 1.375)
+            maintenance_calories = bmr * multiplier
+            
+            # Adjust based on health goals
+            target_calories = maintenance_calories
+            if any(goal in ['weight_loss', 'lose_weight', 'fat_loss'] for goal in health_goals):
+                target_calories = maintenance_calories - 500  # 500 cal deficit
+            elif any(goal in ['weight_gain', 'muscle_gain', 'bulk'] for goal in health_goals):
+                target_calories = maintenance_calories + 300  # 300 cal surplus
+            
+            # Calculate macros
+            if any(goal in ['muscle_gain', 'bulk', 'strength'] for goal in health_goals):
+                # Higher protein for muscle gain
+                protein = weight * 2.2  # 2.2g per kg
+                fat = target_calories * 0.25 / 9  # 25% of calories from fat
+                carbs = (target_calories - (protein * 4) - (fat * 9)) / 4
+            else:
+                # Standard macro distribution
+                protein = weight * 1.6  # 1.6g per kg
+                fat = target_calories * 0.25 / 9  # 25% of calories from fat
+                carbs = (target_calories - (protein * 4) - (fat * 9)) / 4
             
             return {
-                "agent": self.name,
-                "response": response,
-                "status": "no_data"
+                'calories': round(target_calories),
+                'protein': round(protein),
+                'carbs': round(carbs),
+                'fat': round(fat)
             }
-        
-        # Calculate averages from recent data
-        daily_data = self._group_logs_by_day(recent_logs)
-        avg_daily = {
-            'calories': sum(day['calories'] for day in daily_data.values()) / len(daily_data),
-            'protein': sum(day['protein'] for day in daily_data.values()) / len(daily_data),
-            'carbs': sum(day['carbs'] for day in daily_data.values()) / len(daily_data),
-            'fat': sum(day['fat'] for day in daily_data.values()) / len(daily_data)
-        }
-        
-        response = f"**🎯 Goal Analysis (7-day average)**\n\n"
-        
-        # Calculate goal percentages
-        for nutrient, goal in daily_goals.items():
-            if nutrient in avg_daily:
-                current = avg_daily[nutrient]
-                percentage = (current / goal) * 100
-                status = "🎯" if 90 <= percentage <= 110 else "📈" if percentage < 90 else "📉"
-                
-                response += f"{status} **{nutrient.title()}:** {current:.0f}/{goal} ({percentage:.0f}%)\n"
-        
-        response += "\n"
-        
-        # Generate goal insights
-        insights_prompt = f"""
-        Analyze goal progress based on this data:
-        
-        Daily goals: {json.dumps(daily_goals, indent=2)}
-        Current averages: {json.dumps(avg_daily, indent=2)}
-        Tracking days: {len(daily_data)}
-        
-        Provide specific recommendations for reaching nutrition goals.
-        """
-        
-        insights = await self.generate_response(insights_prompt, context)
-        response += f"**💡 Goal Insights:**\n{insights}"
-        
-        return {
-            "agent": self.name,
-            "response": response,
-            "goal_data": {
-                "targets": daily_goals,
-                "current_averages": avg_daily,
-                "tracking_days": len(daily_data)
-            },
-            "status": "success"
-        }
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating personalized goals: {e}")
+            return None
     
     async def _analyze_trends(self, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze eating patterns and trends"""
-        
-        logs = await self._get_recent_nutrition_logs(user_id, days=14)
+        logs = await self._get_nutrition_logs(user_id, days=14)
         
         if not logs:
-            return {
-                "agent": self.name,
-                "response": "**📈 Trend Analysis - Insufficient Data**\n\nI need at least 2 weeks of data to identify meaningful patterns. Keep logging your meals!",
-                "status": "no_data"
-            }
+            return {"agent": self.name, "response": "**📈 Trend Analysis - Need 2+ weeks of data**", "status": "no_data"}
         
-        # Analyze patterns
-        patterns = self._identify_eating_patterns(logs)
+        patterns = self._identify_patterns(logs)
         
         response = f"**📈 Eating Patterns & Trends (14 days)**\n\n"
         
-        # Most active meal times
         if patterns['meal_distribution']:
-            response += f"**🕐 Meal Timing Patterns:**\n"
+            response += f"**🕐 Meal Patterns:**\n"
             for meal, count in patterns['meal_distribution'].items():
                 response += f"• {meal.title()}: {count} entries\n"
             response += "\n"
         
-        # Calorie trends
-        if patterns['calorie_trend']:
-            trend_direction = "increasing" if patterns['calorie_trend'] > 0 else "decreasing"
-            response += f"**📊 Calorie Trend:** {trend_direction.title()} by {abs(patterns['calorie_trend']):.0f} kcal/day\n\n"
-        
-        # Weekly comparison
-        week1_avg = patterns.get('week1_avg', 0)
-        week2_avg = patterns.get('week2_avg', 0)
-        if week1_avg and week2_avg:
-            diff = week2_avg - week1_avg
+        if patterns.get('week1_avg') and patterns.get('week2_avg'):
+            diff = patterns['week2_avg'] - patterns['week1_avg']
             trend = "📈" if diff > 0 else "📉"
             response += f"**📅 Weekly Comparison:**\n"
-            response += f"Week 1: {week1_avg:.0f} kcal/day\n"
-            response += f"Week 2: {week2_avg:.0f} kcal/day\n"
+            response += f"Week 1: {patterns['week1_avg']:.0f} kcal/day\n"
+            response += f"Week 2: {patterns['week2_avg']:.0f} kcal/day\n"
             response += f"{trend} Change: {diff:+.0f} kcal/day\n\n"
         
-        # Generate trend insights
-        insights_prompt = f"""
-        Analyze these eating patterns and trends:
-        
-        Patterns data: {json.dumps(patterns, indent=2)}
-        Total entries: {len(logs)}
-        Time period: 14 days
-        
-        Provide insights about:
-        1. Eating consistency
-        2. Meal timing patterns
-        3. Nutritional trends
-        4. Behavioral observations
-        """
-        
-        insights = await self.generate_response(insights_prompt, context)
+        insights = await self._generate_insights(
+            f"Eating patterns: {json.dumps(patterns)} over {len(logs)} entries",
+            context, "trends"
+        )
         response += f"**💡 Pattern Insights:**\n{insights}"
         
-        return {
-            "agent": self.name,
-            "response": response,
-            "trend_data": patterns,
-            "status": "success"
-        }
+        return {"agent": self.name, "response": response, "trend_data": patterns, "status": "success"}
     
-    async def _log_food_intake(self, request: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Help user log food intake"""
-        
-        message = request.get("message", "")
-        
-        response = f"**📝 Food Logging Assistant**\n\n"
-        response += "I can help you log your food intake! However, for accurate tracking, I recommend using the nutrition calculator first to analyze specific foods.\n\n"
-        response += "**How to log foods:**\n"
-        response += "1. Ask me to *'analyze nutrition in [food]'* first\n"
-        response += "2. The nutrition data will be automatically saved\n"
-        response += "3. Check your progress with *'track my daily progress'*\n\n"
-        response += "**Example:**\n"
-        response += "• 'Analyze nutrition in two eggs'\n"
-        response += "• 'What's in a banana?'\n"
-        response += "• 'Calories in 100g chicken breast'\n\n"
-        response += "Try asking about a specific food item!"
-        
+    async def _log_food_helper(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Help user with food logging"""
         return {
             "agent": self.name,
-            "response": response,
+            "response": "**📝 Food Logging Assistant**\n\nTo log foods accurately:\n1. Ask me to *'analyze nutrition in [food]'* first\n2. Data gets automatically saved\n3. Check progress with *'track my daily progress'*\n\n**Examples:**\n• 'Analyze nutrition in banana'\n• 'Calories in chicken breast'\n• 'What's in two eggs?'\n\nTry asking about a specific food!",
             "status": "info"
         }
     
     async def _general_tracking_response(self, message: str, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle general tracking questions with AI"""
+        """Handle general tracking questions with AI and personalized user context"""
+        recent_logs = await self._get_nutrition_logs(user_id, days=7)
+        user_profile = await self._get_user_profile(user_id)
         
-        # Get recent data for context
-        recent_logs = await self._get_recent_nutrition_logs(user_id, days=7)
-        chat_history = await self._get_chat_history(user_id)
+        # Create personalized prompt
+        user_context = ""
+        greeting = "👋 Hi there! "
+        
+        if user_profile:
+            user_context = f"""
+            User Profile Context:
+            - Name: {user_profile.get('name', 'User')}
+            - Health Goals: {', '.join(user_profile.get('health_goals', [])) if user_profile.get('health_goals') else 'Not set'}
+            - Activity Level: {user_profile.get('activity_level', 'Not set')}
+            - Weight: {user_profile.get('weight', 'Not set')} kg
+            - Recent tracking: {len(recent_logs)} entries in past 7 days
+            
+            """
+            greeting = f"👋 Hi {user_profile.get('name', 'there')}! "
         
         prompt = f"""
-        Answer this diet tracking question: {message}
+        {user_context}
+        You are a diet tracking expert helping this user. Answer their question: {message}
         
-        User's recent nutrition data: {len(recent_logs)} entries in past 7 days
-        Recent chat history: {chat_history[-3:] if chat_history else 'None'}
+        Start your response with: "{greeting}"
         
-        Provide helpful, personalized advice about diet tracking, nutrition monitoring, or progress analysis.
+        Consider their personal profile when giving advice. Provide helpful, personalized advice about:
+        - Diet tracking specific to their health goals
+        - Nutrition monitoring aligned with their activity level
+        - Progress analysis relevant to their objectives
+        - Behavioral insights based on their tracking patterns
+        
         Use emojis and be encouraging. Keep responses concise but informative.
+        Reference their goals and progress when relevant.
         """
         
         try:
             response = await self.generate_response(prompt, context)
-            
-            return {
-                "agent": self.name,
-                "response": response,
-                "type": "general_tracking",
-                "status": "success"
-            }
+            return {"agent": self.name, "response": response, "type": "general_tracking", "status": "success"}
         except Exception as e:
             self.logger.error(f"Error generating AI response: {e}")
+            fallback_greeting = f"Hi {user_profile.get('name', 'there')}! " if user_profile and user_profile.get('name') else "Hi there! "
+            return {"agent": self.name, "response": f"{fallback_greeting}I can help you track your diet progress! Try asking about daily progress, weekly trends, or nutrition goals.", "status": "success"}
+    
+    async def _get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile information for personalized responses"""
+        try:
+            if not user_id:
+                return None
+                
+            user = await User.get(user_id)
+            if not user:
+                return None
+            
             return {
-                "agent": self.name,
-                "response": "I can help you track your diet progress! Try asking about your daily progress, weekly trends, or nutrition goals.",
-                "status": "success"
+                "name": user.name,
+                "health_goals": user.profile.health_goals or [],
+                "dietary_preferences": user.profile.dietary_preferences or [],
+                "activity_level": user.profile.activity_level,
+                "age": user.profile.age,
+                "weight": user.profile.weight,
+                "height": user.profile.height,
+                "allergies": user.profile.allergies or [],
+                "gender": user.profile.gender
             }
-    
-    # Helper methods for data retrieval and analysis
-    
-    async def _get_today_nutrition_logs(self, user_id: str) -> List[NutritionLog]:
-        """Get today's nutrition logs"""
-        try:
-            today = datetime.now().date()
-            logs = await NutritionLog.find(
-                NutritionLog.user_id == user_id,
-                NutritionLog.date >= today,
-                NutritionLog.date < today + timedelta(days=1)
-            ).to_list()
-            return logs
         except Exception as e:
-            self.logger.error(f"Error getting today's logs: {e}")
-            return []
+            self.logger.error(f"Error fetching user profile: {e}")
+            return None
     
-    async def _get_nutrition_logs_for_date(self, user_id: str, date: datetime) -> List[NutritionLog]:
-        """Get nutrition logs for specific date"""
-        try:
-            target_date = date.date()
-            logs = await NutritionLog.find(
-                NutritionLog.user_id == user_id,
-                NutritionLog.date >= target_date,
-                NutritionLog.date < target_date + timedelta(days=1)
-            ).to_list()
-            return logs
-        except Exception as e:
-            self.logger.error(f"Error getting logs for date {date}: {e}")
-            return []
+    # Helper methods - streamlined and consolidated
     
-    async def _get_recent_nutrition_logs(self, user_id: str, days: int = 7) -> List[NutritionLog]:
-        """Get recent nutrition logs"""
+    async def _get_nutrition_logs(self, user_id: str, days: int = 7) -> List[NutritionLog]:
+        """Get nutrition logs for specified days"""
         try:
             start_date = datetime.now() - timedelta(days=days)
-            logs = await NutritionLog.find(
+            return await NutritionLog.find(
                 NutritionLog.user_id == user_id,
                 NutritionLog.date >= start_date
             ).sort(-NutritionLog.date).to_list()
-            return logs
         except Exception as e:
-            self.logger.error(f"Error getting recent logs: {e}")
+            self.logger.error(f"Error getting nutrition logs: {e}")
             return []
     
-    def _calculate_nutrition_totals(self, logs: List[NutritionLog]) -> Dict[str, float]:
+    def _calculate_totals(self, logs: List[NutritionLog]) -> Dict[str, float]:
         """Calculate nutrition totals from logs"""
         return {
             'calories': sum(log.calories for log in logs),
@@ -582,25 +481,21 @@ class DietTrackerAgent(BaseAgent):
             'sodium': sum(log.sodium for log in logs)
         }
     
-    def _group_logs_by_meal(self, logs: List[NutritionLog]) -> Dict[str, List[NutritionLog]]:
+    def _group_by_meal(self, logs: List[NutritionLog]) -> Dict[str, List[NutritionLog]]:
         """Group logs by meal type"""
         meal_groups = {}
         for log in logs:
             meal_type = log.meal_type or 'snack'
-            if meal_type not in meal_groups:
-                meal_groups[meal_type] = []
-            meal_groups[meal_type].append(log)
+            meal_groups.setdefault(meal_type, []).append(log)
         return meal_groups
     
-    def _group_logs_by_day(self, logs: List[NutritionLog]) -> Dict[str, Dict[str, Any]]:
+    def _group_by_day(self, logs: List[NutritionLog]) -> Dict[str, Dict[str, Any]]:
         """Group logs by day and calculate daily totals"""
         daily_data = {}
         for log in logs:
             date_str = log.date.strftime('%Y-%m-%d')
             if date_str not in daily_data:
-                daily_data[date_str] = {
-                    'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0, 'entries': 0
-                }
+                daily_data[date_str] = {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0, 'entries': 0}
             
             daily_data[date_str]['calories'] += log.calories
             daily_data[date_str]['protein'] += log.protein
@@ -610,75 +505,24 @@ class DietTrackerAgent(BaseAgent):
         
         return daily_data
     
-    def _analyze_weekly_trends(self, logs: List[NutritionLog]) -> List[Dict[str, Any]]:
-        """Analyze weekly trends from logs"""
-        if len(logs) < 7:
-            return []
-        
-        # Sort logs by date
-        sorted_logs = sorted(logs, key=lambda x: x.date)
-        
-        # Group into weeks
-        weeks = []
-        current_week = []
-        
-        for log in sorted_logs:
-            if not current_week:
-                current_week = [log]
-            elif (log.date - current_week[0].date).days < 7:
-                current_week.append(log)
-            else:
-                # Process completed week
-                if len(current_week) >= 3:  # At least 3 days of data
-                    week_totals = self._calculate_nutrition_totals(current_week)
-                    week_days = len(set(log.date.date() for log in current_week))
-                    weeks.append({
-                        'avg_calories': week_totals['calories'] / week_days,
-                        'avg_protein': week_totals['protein'] / week_days,
-                        'days_tracked': week_days
-                    })
-                current_week = [log]
-        
-        # Process final week
-        if len(current_week) >= 3:
-            week_totals = self._calculate_nutrition_totals(current_week)
-            week_days = len(set(log.date.date() for log in current_week))
-            weeks.append({
-                'avg_calories': week_totals['calories'] / week_days,
-                'avg_protein': week_totals['protein'] / week_days,
-                'days_tracked': week_days
-            })
-        
-        return weeks
-    
-    def _identify_eating_patterns(self, logs: List[NutritionLog]) -> Dict[str, Any]:
+    def _identify_patterns(self, logs: List[NutritionLog]) -> Dict[str, Any]:
         """Identify eating patterns from logs"""
         if not logs:
             return {}
         
         # Meal distribution
-        meal_distribution = {}
+        meal_dist = {}
         for log in logs:
             meal_type = log.meal_type or 'snack'
-            meal_distribution[meal_type] = meal_distribution.get(meal_type, 0) + 1
+            meal_dist[meal_type] = meal_dist.get(meal_type, 0) + 1
         
-        # Calorie trend (simple linear trend)
+        # Daily calories for trend analysis
         daily_calories = {}
         for log in logs:
             date_str = log.date.strftime('%Y-%m-%d')
             daily_calories[date_str] = daily_calories.get(date_str, 0) + log.calories
         
-        calorie_trend = 0
-        if len(daily_calories) >= 2:
-            dates = sorted(daily_calories.keys())
-            first_half = dates[:len(dates)//2]
-            second_half = dates[len(dates)//2:]
-            
-            first_avg = sum(daily_calories[d] for d in first_half) / len(first_half)
-            second_avg = sum(daily_calories[d] for d in second_half) / len(second_half)
-            calorie_trend = second_avg - first_avg
-        
-        # Weekly comparison for 14-day data
+        # Weekly comparison
         week1_avg = week2_avg = 0
         if len(daily_calories) >= 14:
             sorted_dates = sorted(daily_calories.keys())
@@ -689,12 +533,35 @@ class DietTrackerAgent(BaseAgent):
             week2_avg = sum(daily_calories[d] for d in week2_dates) / 7
         
         return {
-            'meal_distribution': meal_distribution,
-            'calorie_trend': calorie_trend,
+            'meal_distribution': meal_dist,
             'week1_avg': week1_avg,
             'week2_avg': week2_avg,
             'total_days': len(daily_calories)
         }
+    
+    async def _generate_insights(self, data_summary: str, context: Dict[str, Any], analysis_type: str) -> str:
+        """Generate AI insights based on data and analysis type"""
+        insight_prompts = {
+            "overview": "Provide 3 encouraging insights about their tracking progress and suggestions for improvement.",
+            "daily": "Analyze today's nutrition and provide 3 actionable insights.",
+            "weekly": "Identify weekly patterns and provide consistency and nutrition balance insights.",
+            "monthly": "Analyze monthly trends and provide long-term progress insights.",
+            "goals": "Provide specific recommendations for reaching nutrition goals.",
+            "trends": "Identify eating patterns and behavioral observations with recommendations."
+        }
+        
+        prompt = f"""
+        Analyze this nutrition data: {data_summary}
+        
+        {insight_prompts.get(analysis_type, "Provide helpful nutrition insights.")}
+        Keep it concise, encouraging, and actionable. Use bullet points.
+        """
+        
+        try:
+            return await self.generate_response(prompt, context)
+        except Exception as e:
+            self.logger.error(f"Error generating insights: {e}")
+            return "Continue tracking consistently for better insights!"
     
     def get_agent_description(self) -> Dict[str, Any]:
         """Get agent description and capabilities"""
@@ -704,3 +571,28 @@ class DietTrackerAgent(BaseAgent):
             "capabilities": self.capabilities,
             "protocols": self.communication_protocols
         }
+    
+    async def _get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile information for personalized responses"""
+        try:
+            if not user_id:
+                return None
+                
+            user = await User.get(user_id)
+            if not user:
+                return None
+            
+            return {
+                "name": user.name,
+                "health_goals": user.profile.health_goals or [],
+                "dietary_preferences": user.profile.dietary_preferences or [],
+                "activity_level": user.profile.activity_level,
+                "age": user.profile.age,
+                "weight": user.profile.weight,
+                "height": user.profile.height,
+                "allergies": user.profile.allergies or [],
+                "gender": user.profile.gender
+            }
+        except Exception as e:
+            self.logger.error(f"Error fetching user profile: {e}")
+            return None
