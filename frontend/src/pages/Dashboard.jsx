@@ -202,48 +202,31 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Activity & Progress */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Activities */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
-              <Clock className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <activity.icon className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 mb-1">{activity.action}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="w-full mt-6 py-3 text-emerald-600 font-medium hover:bg-emerald-50 rounded-xl transition-colors duration-200">
-              View all activities
-            </button>
+        {/* Recent Activity */}
+        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
+            <Clock className="w-5 h-5 text-gray-400" />
           </div>
-
-          {/* Progress Chart Placeholder */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Weekly Progress</h2>
-            <div className="h-64 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BarChart3 className="w-8 h-8 text-emerald-600" />
+          <div className="space-y-4">
+            {recentActivities.map((activity, index) => (
+              <div
+                key={index}
+                className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200"
+              >
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <activity.icon className="w-4 h-4 text-emerald-600" />
                 </div>
-                <p className="text-gray-600 font-medium">Interactive chart coming soon</p>
-                <p className="text-sm text-gray-500 mt-1">Track your daily progress visually</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">{activity.action}</p>
+                  <p className="text-xs text-gray-500">{activity.time}</p>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
+          <button className="w-full mt-6 py-3 text-emerald-600 font-medium hover:bg-emerald-50 rounded-xl transition-colors duration-200">
+            View all activities
+          </button>
         </div>
 
         {/* AI Suggestions */}
