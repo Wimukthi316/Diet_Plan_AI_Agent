@@ -5,6 +5,7 @@ import os
 import requests
 from typing import Dict, Any, List, Optional
 from backend.agents.base_agent import BaseAgent
+from backend.models.user import User
 from backend.utils.security import sanitize_input
 import re
 
@@ -272,45 +273,70 @@ class RecipeFinderAgent(BaseAgent):
         return response
     
     async def _general_recipe_response(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle general recipe questions with AI"""
+        """Handle general recipe questions with AI and personalized user context"""
         
         if not message:
             message = "Tell me about recipe finding and what you can help me with"
+        
+        # Get user profile for personalized responses
+        user_profile = await self._get_user_profile(context.get("user_id"))
         
         # Check for specific recipe types
         message_lower = message.lower()
         is_recipe_request = any(word in message_lower for word in 
                                ['recipe', 'cook', 'meal', 'ingredient', 'dish', 'food'])
         
+        # Create personalized prompt based on user profile
+        user_context = ""
+        greeting = "👋 Hi there! "
+        
+        if user_profile:
+            user_context = f"""
+            User Profile Context:
+            - Name: {user_profile.get('name', 'User')}
+            - Health Goals: {', '.join(user_profile.get('health_goals', [])) if user_profile.get('health_goals') else 'Not set'}
+            - Dietary Preferences: {', '.join(user_profile.get('dietary_preferences', [])) if user_profile.get('dietary_preferences') else 'None specified'}
+            - Activity Level: {user_profile.get('activity_level', 'Not set')}
+            - Allergies: {', '.join(user_profile.get('allergies', [])) if user_profile.get('allergies') else 'None'}
+            
+            """
+            greeting = f"👋 Hi {user_profile.get('name', 'there')}! "
+        
         if is_recipe_request:
             prompt = f"""
-            You are a culinary expert and recipe specialist. Help with this request: {message}
+            {user_context}
+            You are a culinary expert and recipe specialist helping this user. Handle this request: {message}
             
-            User context: {context}
+            Start your response with: "{greeting}"
             
-            Provide helpful advice about:
-            - Recipe suggestions and cooking tips
-            - Ingredient substitutions and alternatives  
-            - Meal planning and preparation
-            - Cooking techniques and methods
-            - Dietary accommodations
-            - Nutritional considerations
+            Consider their personal profile when giving advice. Provide helpful advice about:
+            - Recipe suggestions tailored to their dietary preferences and goals
+            - Ingredient substitutions respecting their allergies and restrictions
+            - Meal planning appropriate for their activity level and health goals
+            - Cooking techniques and methods suitable for their lifestyle
+            - Dietary accommodations for their specific needs
+            - Nutritional considerations aligned with their health goals
             
             Be practical, encouraging, and include specific recommendations when possible.
-            Use emojis to make it engaging.
+            Use emojis to make it engaging. Reference their preferences when relevant.
+            If they haven't set dietary preferences, encourage them to update their profile.
             """
         else:
             prompt = f"""
-            You are a recipe and cooking expert. Answer this question: {message}
+            {user_context}
+            You are a recipe and cooking expert helping this user. Answer their question: {message}
             
-            Focus on:
-            - Recipe discovery and meal planning
-            - Cooking techniques and tips
-            - Ingredient knowledge and substitutions
-            - Dietary preferences and restrictions
-            - Nutritional cooking advice
+            Start your response with: "{greeting}"
+            
+            Consider their profile when giving advice. Focus on:
+            - Recipe discovery and meal planning suited to their preferences
+            - Cooking techniques and tips appropriate for their lifestyle  
+            - Ingredient knowledge respecting their allergies and restrictions
+            - Dietary preferences and health goal alignment
+            - Nutritional cooking advice for their specific needs
             
             Keep responses helpful and practical. Use emojis to make it engaging.
+            Be personal and reference their goals/preferences when relevant.
             """
         
         try:
@@ -324,11 +350,37 @@ class RecipeFinderAgent(BaseAgent):
             }
         except Exception as e:
             self.logger.error(f"Error generating AI response: {e}")
+            fallback_greeting = f"Hi {user_profile.get('name', 'there')}! " if user_profile and user_profile.get('name') else "Hi there! "
             return {
                 "agent": self.name,
-                "response": "I can help you find recipes and cooking advice! Try asking about specific dishes, ingredients, or meal planning. 🍳",
+                "response": f"{fallback_greeting}I can help you find recipes and cooking advice! Try asking about specific dishes, ingredients, or meal planning. 🍳",
                 "status": "success"
             }
+    
+    async def _get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile information for personalized responses"""
+        try:
+            if not user_id:
+                return None
+                
+            user = await User.get(user_id)
+            if not user:
+                return None
+            
+            return {
+                "name": user.name,
+                "health_goals": user.profile.health_goals or [],
+                "dietary_preferences": user.profile.dietary_preferences or [],
+                "activity_level": user.profile.activity_level,
+                "age": user.profile.age,
+                "weight": user.profile.weight,
+                "height": user.profile.height,
+                "allergies": user.profile.allergies or [],
+                "gender": user.profile.gender
+            }
+        except Exception as e:
+            self.logger.error(f"Error fetching user profile: {e}")
+            return None
     
     def get_agent_description(self) -> Dict[str, Any]:
         """Get agent description and capabilities"""
