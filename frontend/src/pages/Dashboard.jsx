@@ -5,8 +5,6 @@ import { Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import {
   MessageCircle,
-  BookOpen,
-  BarChart3,
   TrendingUp,
   Target,
   Calendar,
@@ -16,7 +14,6 @@ import {
   ArrowRight,
 } from "lucide-react"
 import LoadingSpinner from "../components/LoadingSpinner"
-import FaviconIcon from "../components/FaviconIcon"
 
 const Dashboard = () => {
   const { user } = useAuth()
@@ -49,34 +46,13 @@ const Dashboard = () => {
       href: "/chat",
       gradient: "from-emerald-500 to-emerald-600",
     },
-    {
-      title: "Analyze Food",
-      description: "Check nutritional content of your meals",
-      icon: ({ className }) => <FaviconIcon className={className} />,
-      href: "/nutrition",
-      gradient: "from-blue-500 to-blue-600",
-    },
-    {
-      title: "Find Recipes",
-      description: "Discover healthy recipes for your goals",
-      icon: BookOpen,
-      href: "/recipes",
-      gradient: "from-purple-500 to-purple-600",
-    },
-    {
-      title: "Track Progress",
-      description: "Monitor your daily intake and goals",
-      icon: BarChart3,
-      href: "/tracking",
-      gradient: "from-amber-500 to-amber-600",
-    },
   ]
 
   const recentActivities = [
-    { action: "Logged breakfast: Oatmeal with berries", time: "2 hours ago", icon: Activity },
-    { action: "Found recipe: Quinoa Buddha Bowl", time: "5 hours ago", icon: BookOpen },
-    { action: "Completed weekly goal", time: "1 day ago", icon: Target },
-    { action: "Analyzed nutrition for lunch", time: "2 days ago", icon: BarChart3 },
+    { action: "Started conversation with AI assistant", time: "2 hours ago", icon: MessageCircle },
+    { action: "Asked about healthy breakfast options", time: "5 hours ago", icon: Activity },
+    { action: "Updated profile information", time: "1 day ago", icon: Target },
+    { action: "Discussed meal planning strategies", time: "2 days ago", icon: MessageCircle },
   ]
 
   if (loading) {

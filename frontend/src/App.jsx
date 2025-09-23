@@ -9,9 +9,6 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import ChatPage from './pages/ChatPage';
-import NutritionPage from './pages/NutritionPage';
-import RecipesPage from './pages/RecipesPage';
-import TrackingPage from './pages/TrackingPage';
 import ProfilePage from './pages/ProfilePage';
 
 // Layout
@@ -56,42 +53,6 @@ function App() {
               isAuthenticated ? (
                 <Layout>
                   <ChatPage />
-                </Layout>
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route
-            path="/nutrition"
-            element={
-              isAuthenticated ? (
-                <Layout>
-                  <NutritionPage />
-                </Layout>
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route
-            path="/recipes"
-            element={
-              isAuthenticated ? (
-                <Layout>
-                  <RecipesPage />
-                </Layout>
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route
-            path="/tracking"
-            element={
-              isAuthenticated ? (
-                <Layout>
-                  <TrackingPage />
                 </Layout>
               ) : (
                 <Navigate to="/login" />

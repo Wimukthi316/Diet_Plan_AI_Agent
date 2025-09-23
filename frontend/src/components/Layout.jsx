@@ -4,13 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   Home,
   MessageCircle,
-  Beaker,
-  BookOpen,
-  BarChart3,
   User,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Zap
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -23,9 +21,6 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'AI Chat', href: '/chat', icon: MessageCircle },
-    { name: 'Nutrition', href: '/nutrition', icon: Beaker },
-    { name: 'Recipes', href: '/recipes', icon: BookOpen },
-    { name: 'Tracking', href: '/tracking', icon: BarChart3 },
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
@@ -46,7 +41,7 @@ const Layout = ({ children }) => {
           <div className="flex h-16 items-center justify-between px-4">
             <Link to="/dashboard" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <Beaker className="w-5 h-5 text-white" />
+                <Zap className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold gradient-text">Diet AI</span>
             </Link>
@@ -106,7 +101,7 @@ const Layout = ({ children }) => {
         <div className="flex h-16 items-center px-6 border-b border-gray-200">
           <Link to="/dashboard" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <Beaker className="w-5 h-5 text-white" />
+              <Zap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold gradient-text">Diet AI</span>
           </Link>
