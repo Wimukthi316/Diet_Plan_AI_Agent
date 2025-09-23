@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 import os
 import logging
+from datetime import datetime
 from dotenv import load_dotenv
 
 from backend.models.database import init_database
@@ -169,6 +170,63 @@ async def login(credentials: dict):
         logger.error(f"Login error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during login")
 
+def format_response_for_history(response_data: dict) -> str:
+    """Format the multi-agent response for chat history storage"""
+    if not response_data:
+        return ""
+    
+    if response_data.get("error"):
+        return f"Sorry, I encountered an error: {response_data['error']}"
+    
+    content = ""
+    agent_name = "AI Assistant"
+    
+    # Get the primary agent name
+    if response_data.get("primary_agent"):
+        agent_names = {
+            'nutrition_calculator': 'Nutrition Calculator',
+            'recipe_finder': 'Recipe Finder', 
+            'diet_tracker': 'Diet Tracker'
+        }
+        agent_name = agent_names.get(response_data["primary_agent"], 'AI Assistant')
+    
+    # Add agent identifier
+    content += f"*Processed by: {agent_name}*\n\n"
+    
+    # Primary response
+    if response_data.get("primary_response"):
+        primary_resp = response_data["primary_response"]
+        if primary_resp.get("response"):
+            content += primary_resp["response"]
+        elif isinstance(primary_resp, str):
+            content += primary_resp
+        else:
+            # Try to extract meaningful content from structured data
+            if primary_resp.get("food_analysis"):
+                analysis = primary_resp["food_analysis"]
+                content += f"**Nutrition Analysis for {analysis.get('food_name', 'Food')}**\n\n"
+                content += f"🔥 **Calories:** {analysis.get('calories', 0)} kcal\n"
+                content += f"🥩 **Protein:** {analysis.get('protein', 0)}g\n"
+                content += f"🍞 **Carbs:** {analysis.get('carbs', 0)}g\n"
+                content += f"🧈 **Fat:** {analysis.get('fat', 0)}g\n"
+            elif primary_resp.get("recipes"):
+                content += "**Recipe Suggestions Found**\n\n"
+                for i, recipe in enumerate(primary_resp["recipes"][:3], 1):
+                    content += f"{i}. **{recipe.get('title', 'Recipe')}**\n"
+                    if recipe.get('ready_in_minutes'):
+                        content += f"   ⏱️ {recipe['ready_in_minutes']} minutes\n"
+                    content += "\n"
+            else:
+                content += str(primary_resp)
+    
+    # Add synthesis if available
+    if response_data.get("synthesis"):
+        if content and not content.endswith("\n\n"):
+            content += "\n\n---\n\n"
+        content += response_data["synthesis"]
+    
+    return content or "Response processed successfully"
+
 @app.post("/chat")
 async def chat_with_agents(
     message: dict, 
@@ -187,11 +245,15 @@ async def chat_with_agents(
         
         # Save chat interaction to history
         if response and user_message:
+            # Format the response for chat history storage
+            response_text = format_response_for_history(response)
+            agent_name = response.get("primary_agent", "Unknown")
+            
             await ChatMessage.save_chat_interaction(
                 user_id=str(current_user.id),
                 message=user_message,
-                response=response.get("response", ""),
-                agent_name=response.get("agent", "Unknown"),
+                response=response_text,
+                agent_name=agent_name,
                 metadata={
                     "status": response.get("status"),
                     "type": response.get("type", "chat")
@@ -246,8 +308,17 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
         "id": str(current_user.id),
         "email": current_user.email,
         "name": current_user.name,
-        "dietary_preferences": current_user.dietary_preferences,
-        "health_goals": current_user.health_goals
+        "profile": {
+            "age": current_user.profile.age,
+            "gender": current_user.profile.gender,
+            "weight": current_user.profile.weight,
+            "height": current_user.profile.height,
+            "activity_level": current_user.profile.activity_level,
+            "dietary_preferences": current_user.profile.dietary_preferences or [],
+            "allergies": current_user.profile.allergies or [],
+            "health_conditions": current_user.profile.health_conditions or [],
+            "health_goals": current_user.profile.health_goals or []
+        }
     }
 
 @app.put("/user/profile")
@@ -257,9 +328,38 @@ async def update_user_profile(
 ):
     """Update user profile"""
     try:
-        await current_user.update({"$set": profile_data})
-        return {"message": "Profile updated successfully"}
+        # Validate profile data
+        from backend.utils.security import validate_user_profile
+        validated_data = validate_user_profile(profile_data)
+        
+        # Update the nested profile fields
+        update_data = {}
+        for key, value in validated_data.items():
+            update_data[f"profile.{key}"] = value
+        
+        # Also update the updated_at timestamp
+        update_data["updated_at"] = datetime.utcnow()
+        
+        await current_user.update({"$set": update_data})
+        
+        # Return updated profile
+        updated_user = await User.get(current_user.id)
+        return {
+            "message": "Profile updated successfully",
+            "profile": {
+                "age": updated_user.profile.age,
+                "gender": updated_user.profile.gender,
+                "weight": updated_user.profile.weight,
+                "height": updated_user.profile.height,
+                "activity_level": updated_user.profile.activity_level,
+                "dietary_preferences": updated_user.profile.dietary_preferences or [],
+                "allergies": updated_user.profile.allergies or [],
+                "health_conditions": updated_user.profile.health_conditions or [],
+                "health_goals": updated_user.profile.health_goals or []
+            }
+        }
     except Exception as e:
+        logger.error(f"Error updating profile: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":

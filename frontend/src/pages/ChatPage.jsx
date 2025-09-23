@@ -28,26 +28,46 @@ const ChatPage = () => {
       setIsLoadingHistory(true);
       const response = await chatAPI.getChatHistory();
       
+      console.log('Chat history response:', response.data); // Debug log
+      
       if (response.data && response.data.history && response.data.history.length > 0) {
         // Convert history to message format
-        const historyMessages = response.data.history.reverse().map((item, index) => [
-          {
-            id: `${item.id}-user-${index}`,
-            type: 'user',
-            content: item.message,
-            timestamp: new Date(item.timestamp),
-            agent: item.agent
-          },
-          {
-            id: `${item.id}-ai-${index}`,
-            type: 'ai',
-            content: item.response,
-            timestamp: new Date(item.timestamp),
-            agent: item.agent
+        const historyMessages = response.data.history.reverse().map((item, index) => {
+          // Ensure we have valid data
+          if (!item.message && !item.response) {
+            console.warn('Invalid chat history item:', item);
+            return [];
           }
-        ]).flat();
+          
+          const messages = [];
+          
+          // Create user message if it exists
+          if (item.message && item.message.trim()) {
+            messages.push({
+              id: `${item.id}-user-${index}`,
+              type: 'user',
+              content: item.message,
+              timestamp: new Date(item.timestamp),
+              agent: item.agent
+            });
+          }
+          
+          // Create AI response message if it exists
+          if (item.response && item.response.trim()) {
+            messages.push({
+              id: `${item.id}-ai-${index}`,
+              type: 'ai',
+              content: item.response,
+              timestamp: new Date(item.timestamp),
+              agent: item.agent
+            });
+          }
+          
+          return messages;
+        }).flat().filter(msg => msg); // Remove any undefined/null messages
         
         setMessages(historyMessages);
+        console.log('Loaded messages:', historyMessages); // Debug log
       } else {
         // Show welcome message if no history
         setMessages([{
@@ -294,25 +314,55 @@ const ChatPage = () => {
               </div>
 
               {/* Message Content */}
-              <div className={`px-4 py-2 rounded-lg ${
-                message.type === 'user'
-                  ? 'bg-primary-600 text-white'
-                  : message.error
-                  ? 'bg-red-50 border border-red-200 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                <div className="whitespace-pre-wrap">
+              <div 
+                className={`px-4 py-2 rounded-lg ${
+                  message.type === 'user'
+                    ? 'bg-primary-600 text-white'
+                    : message.error
+                    ? 'bg-red-50 border border-red-200 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+                style={{
+                  backgroundColor: message.type === 'user' ? '#2563eb' : message.error ? '#fef2f2' : '#f3f4f6',
+                  color: message.type === 'user' ? '#ffffff' : message.error ? '#991b1b' : '#1f2937'
+                }}
+              >
+                <div 
+                  className={`whitespace-pre-wrap ${
+                    message.type === 'user' ? 'text-white' : 'text-gray-800'
+                  }`}
+                  style={{
+                    color: message.type === 'user' ? '#ffffff' : '#1f2937'
+                  }}
+                >
                   {message.content.split('**').map((part, index) => 
                     index % 2 === 1 ? (
-                      <strong key={index}>{part}</strong>
+                      <strong 
+                        key={index} 
+                        className={message.type === 'user' ? 'text-white font-bold' : 'font-bold'}
+                        style={{ color: message.type === 'user' ? '#ffffff' : '#1f2937', fontWeight: 'bold' }}
+                      >
+                        {part}
+                      </strong>
                     ) : (
-                      <span key={index}>{part}</span>
+                      <span 
+                        key={index} 
+                        className={message.type === 'user' ? 'text-white' : ''}
+                        style={{ color: message.type === 'user' ? '#ffffff' : '#1f2937' }}
+                      >
+                        {part}
+                      </span>
                     )
                   )}
                 </div>
-                <div className={`text-xs mt-1 ${
-                  message.type === 'user' ? 'text-primary-200' : 'text-gray-500'
-                }`}>
+                <div 
+                  className={`text-xs mt-1 ${
+                    message.type === 'user' ? 'text-white opacity-75' : 'text-gray-500'
+                  }`}
+                  style={{
+                    color: message.type === 'user' ? 'rgba(255, 255, 255, 0.75)' : '#6b7280'
+                  }}
+                >
                   {formatTimestamp(message.timestamp)}
                 </div>
               </div>
