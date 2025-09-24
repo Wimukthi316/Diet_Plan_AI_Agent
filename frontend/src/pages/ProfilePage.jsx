@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { User, Settings, Bell, Shield, Edit3, Camera, Save, X } from "lucide-react"
+import { User, Settings, Bell, Shield, Edit3, Camera, Save, X, LogOut } from "lucide-react"
 import toast from 'react-hot-toast'
 
 const ProfilePage = () => {
@@ -120,11 +120,19 @@ const ProfilePage = () => {
             </div>
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center gap-3 px-6 py-3 bg-green-800 text-white rounded-xl shadow-lg font-semibold"
+              className="flex items-center gap-3 py-3 px-4 bg-green-800 text-white rounded-xl font-semibold"
               style={{ fontFamily: 'TASA Explorer, sans-serif' }}
             >
               {isEditing ? <X className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
               {isEditing ? 'Cancel' : 'Edit Profile'}
+            </button>
+            <button
+              onClick={logout}
+              className="flex items-center gap-3 py-3 px-4 bg-red-600 text-white rounded-xl font-semibold"
+              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
             </button>
           </div>
         </div>
@@ -316,7 +324,7 @@ const ProfilePage = () => {
                 <div className="flex gap-4 pt-8 border-t border-gray-200">
                   <button
                     type="submit"
-                    className="flex items-center gap-3 px-8 py-4 bg-green-800 text-white rounded-2xl font-bold text-lg shadow-lg"
+                    className="flex items-center gap-3 px-2 py-2 bg-green-800 text-white rounded-2xl font-bold text-lg shadow-lg"
                     style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                   >
                     <Save className="w-5 h-5" />
@@ -325,7 +333,7 @@ const ProfilePage = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="px-8 py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold text-lg"
+                    className="px-2 py-2 bg-gray-200 text-gray-700 rounded-2xl font-bold text-lg"
                     style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                   >
                     Cancel
@@ -420,23 +428,7 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex space-x-6 pt-8">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex-1 bg-green-800 text-white py-4 px-8 rounded-2xl hover:bg-green-900 transition duration-200 font-bold text-lg shadow-lg"
-                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                  >
-                    Edit Profile
-                  </button>
-                  <button
-                    onClick={logout}
-                    className="flex-1 bg-red-600 text-white py-4 px-8 rounded-2xl hover:bg-red-700 transition duration-200 font-bold text-lg shadow-lg"
-                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                  >
-                    Logout
-                  </button>
-                </div>
+
               </>
             )}
           </div>
