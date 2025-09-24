@@ -74,17 +74,6 @@ const Layout = ({ children }) => {
             })}
           </nav>
           <div className="border-t border-gray-100 p-6">
-            <div className="flex items-center space-x-4 mb-4 p-3 rounded-lg bg-gray-50">
-              <div className="w-12 h-12 bg-green-800 rounded-lg flex items-center justify-center">
-                <span className="text-lg font-bold text-white">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-gray-900 truncate">{user?.name || 'User'}</p>
-                <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-              </div>
-            </div>
             <button
               onClick={handleLogout}
               className="flex items-center space-x-3 w-full px-4 py-3 text-base font-medium text-red-600 bg-red-50 rounded-lg"
@@ -127,17 +116,6 @@ const Layout = ({ children }) => {
           })}
         </nav>
         <div className="border-t border-gray-100 p-6">
-          <div className="flex items-center space-x-4 mb-6 p-4 rounded-lg bg-gray-50">
-            <div className="w-14 h-14 bg-green-800 rounded-lg flex items-center justify-center">
-              <span className="text-xl font-bold text-white">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-semibold text-gray-900 truncate">{user?.name || 'User'}</p>
-              <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-            </div>
-          </div>
           <button
             onClick={handleLogout}
             className="flex items-center space-x-3 w-full px-4 py-4 text-base font-semibold text-red-600 bg-red-50 rounded-lg"
