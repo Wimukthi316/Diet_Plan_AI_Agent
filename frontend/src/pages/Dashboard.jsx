@@ -56,7 +56,7 @@ const Dashboard = () => {
       title: "Meal Planning",
       description: "Create your perfect weekly meal plan",
       icon: Calendar,
-      href: "/meal-plan",
+      href: "/chat",
       gradient: "from-emerald-500 via-green-500 to-teal-600",
       image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
     },
@@ -64,7 +64,7 @@ const Dashboard = () => {
       title: "Progress Tracking",
       description: "Monitor your health journey",
       icon: TrendingUp,
-      href: "/progress",
+      href: "/chat",
       gradient: "from-blue-500 via-cyan-500 to-teal-500",
       image: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
     },
@@ -72,7 +72,7 @@ const Dashboard = () => {
       title: "Healthy Recipes",
       description: "Discover nutritious and delicious meals",
       icon: Heart,
-      href: "/recipes",
+      href: "/chat",
       gradient: "from-rose-500 via-pink-500 to-red-500",
       image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
     },
@@ -100,8 +100,8 @@ const Dashboard = () => {
         <div className="relative overflow-hidden bg-white rounded-3xl shadow-2xl h-96">
           <div className="absolute inset-0">
             <img
-              src="https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1400&q=80"
-              alt="Man working out - healthy fitness lifestyle"
+              src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-4.0.3&auto=format&fit=crop&w=1400&q=80"
+              alt="Healthy vegetables and nutritious breakfast"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-gray-900/85 via-gray-900/70 to-gray-900/50"></div>
