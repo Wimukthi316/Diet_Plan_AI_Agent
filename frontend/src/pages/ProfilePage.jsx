@@ -5,7 +5,7 @@ import { User, Settings, Bell, Shield, Edit3, Camera, Save, X } from "lucide-rea
 import toast from 'react-hot-toast'
 
 const ProfilePage = () => {
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, logout } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     age: '',
@@ -43,7 +43,7 @@ const ProfilePage = () => {
   const handleArrayChange = (field, value, isChecked) => {
     setFormData(prev => ({
       ...prev,
-      [field]: isChecked 
+      [field]: isChecked
         ? [...prev[field], value]
         : prev[field].filter(item => item !== value)
     }))
@@ -59,7 +59,7 @@ const ProfilePage = () => {
         weight: formData.weight ? parseFloat(formData.weight) : null,
         height: formData.height ? parseFloat(formData.height) : null
       }
-      
+
       const success = await updateProfile(submitData)
       if (success) {
         setIsEditing(false)
@@ -87,124 +87,137 @@ const ProfilePage = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-8 shadow-sm border border-emerald-200">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+    <div className="min-h-screen bg-white p-4 md:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Modern Header Section */}
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
             <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
-                <span className="text-3xl font-bold text-white">{user?.name?.charAt(0)?.toUpperCase() || "U"}</span>
+              <div className="w-28 h-28 bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl flex items-center justify-center shadow-lg">
+                <span className="text-4xl font-bold text-white" style={{ fontFamily: 'Merienda, cursive' }}>
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </span>
               </div>
-              <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2 border-emerald-100 hover:bg-emerald-50 transition-colors">
-                <Camera className="w-4 h-4 text-emerald-600" />
+              <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-md flex items-center justify-center border-2 border-gray-100">
+                <Camera className="w-5 h-5 text-green-600" />
               </button>
             </div>
             <div className="text-center md:text-left flex-1">
-              <h1 className="text-3xl font-bold text-emerald-900 mb-2">{user?.name || "User"}</h1>
-              <p className="text-emerald-700 text-lg mb-4">{user?.email}</p>
-              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                <span className="px-3 py-1 bg-emerald-200 text-emerald-800 rounded-full text-sm font-medium">
+              <h1 className="text-4xl font-bold text-green-800 mb-3" style={{ fontFamily: 'Merienda, cursive' }}>
+                {user?.name || "User"}
+              </h1>
+              <p className="text-xl text-gray-600 mb-6" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                {user?.email}
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                   Premium Member
                 </span>
-                <span className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-sm font-medium">
+                <span className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                   Active User
                 </span>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
+              className="flex items-center gap-3 px-6 py-3 bg-green-800 text-white rounded-xl shadow-lg font-semibold"
+              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
             >
-              {isEditing ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+              {isEditing ? <X className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
               {isEditing ? 'Cancel' : 'Edit Profile'}
             </button>
           </div>
         </div>
 
-        {/* Quick Actions Grid */}
+        {/* Modern Quick Actions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 cursor-pointer group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                <User className="w-6 h-6 text-blue-600" />
+              <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                <User className="w-7 h-7 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Personal Info</h3>
-                <p className="text-sm text-gray-600">Update details</p>
+                <h3 className="font-bold text-gray-900 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Personal Info</h3>
+                <p className="text-sm text-gray-600" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Update details</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 cursor-pointer group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                <Settings className="w-6 h-6 text-emerald-600" />
+              <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                <Settings className="w-7 h-7 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Settings</h3>
-                <p className="text-sm text-gray-600">Account options</p>
+                <h3 className="font-bold text-gray-900 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Settings</h3>
+                <p className="text-sm text-gray-600" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Account options</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 cursor-pointer group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                <Bell className="w-6 h-6 text-purple-600" />
+              <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                <Bell className="w-7 h-7 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Notifications</h3>
-                <p className="text-sm text-gray-600">Manage alerts</p>
+                <h3 className="font-bold text-gray-900 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Notifications</h3>
+                <p className="text-sm text-gray-600" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Manage alerts</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer group">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 cursor-pointer group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                <Shield className="w-6 h-6 text-red-600" />
+              <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                <Shield className="w-7 h-7 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Security</h3>
-                <p className="text-sm text-gray-600">Privacy settings</p>
+                <h3 className="font-bold text-gray-900 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Security</h3>
+                <p className="text-sm text-gray-600" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Privacy settings</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Profile Information */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-8 py-6">
-            <h2 className="text-2xl font-bold text-white">Profile Information</h2>
-            <p className="text-emerald-100 mt-1">Your personal health and nutrition details</p>
+        {/* Modern Profile Information */}
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="bg-green-800 px-8 py-8">
+            <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Merienda, cursive' }}>
+              Profile Information
+            </h2>
+            <p className="text-green-100 text-lg" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+              Your personal health and nutrition details
+            </p>
           </div>
 
           <div className="p-8">
             {isEditing ? (
               // Edit Form
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Basic Info Grid */}
+                {/* Modern Basic Info Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Age</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Age</label>
                     <input
                       type="number"
                       name="age"
                       value={formData.age}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
                       placeholder="Enter age"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Gender</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Gender</label>
                     <select
                       name="gender"
                       value={formData.gender}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                     >
                       <option value="">Select gender</option>
                       <option value="male">Male</option>
@@ -214,40 +227,43 @@ const ProfilePage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Weight (kg)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Weight (kg)</label>
                     <input
                       type="number"
                       step="0.1"
                       name="weight"
                       value={formData.weight}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
                       placeholder="Enter weight"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Height (cm)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Height (cm)</label>
                     <input
                       type="number"
                       step="0.1"
                       name="height"
                       value={formData.height}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
                       placeholder="Enter height"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                     />
                   </div>
                 </div>
 
                 {/* Activity Level */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-3">Activity Level</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Activity Level</label>
                   <select
                     name="activity_level"
                     value={formData.activity_level}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                   >
                     <option value="">Select activity level</option>
                     {activityLevels.map(level => (
@@ -258,17 +274,19 @@ const ProfilePage = () => {
 
                 {/* Dietary Preferences */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-3">Dietary Preferences</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Dietary Preferences</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {dietaryOptions.map(option => (
-                      <label key={option} className="flex items-center space-x-2">
+                      <label key={option} className="flex items-center space-x-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-green-300">
                         <input
                           type="checkbox"
                           checked={formData.dietary_preferences.includes(option)}
                           onChange={(e) => handleArrayChange('dietary_preferences', option, e.target.checked)}
-                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                         />
-                        <span className="text-sm capitalize">{option.replace('_', ' ')}</span>
+                        <span className="text-sm font-medium capitalize" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                          {option.replace('_', ' ')}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -276,35 +294,39 @@ const ProfilePage = () => {
 
                 {/* Health Goals */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-3">Health Goals</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Health Goals</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {healthGoalOptions.map(goal => (
-                      <label key={goal} className="flex items-center space-x-2">
+                      <label key={goal} className="flex items-center space-x-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-green-300">
                         <input
                           type="checkbox"
                           checked={formData.health_goals.includes(goal)}
                           onChange={(e) => handleArrayChange('health_goals', goal, e.target.checked)}
-                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                         />
-                        <span className="text-sm capitalize">{goal.replace('_', ' ')}</span>
+                        <span className="text-sm font-medium capitalize" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                          {goal.replace('_', ' ')}
+                        </span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                {/* Submit Button */}
-                <div className="flex gap-4 pt-6 border-t border-gray-200">
+                {/* Submit Buttons */}
+                <div className="flex gap-4 pt-8 border-t border-gray-200">
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium shadow-md"
+                    className="flex items-center gap-3 px-8 py-4 bg-green-800 text-white rounded-2xl font-bold text-lg shadow-lg"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                   >
-                    <Save className="w-4 h-4" />
+                    <Save className="w-5 h-5" />
                     Save Changes
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+                    className="px-8 py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold text-lg"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                   >
                     Cancel
                   </button>
@@ -313,28 +335,32 @@ const ProfilePage = () => {
             ) : (
               // Display View
               <>
-                {/* Basic Info Grid */}
+                {/* Modern Basic Info Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Age</label>
-                    <p className="text-xl font-semibold text-gray-900">{user?.profile?.age || "Not set"}</p>
+                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                    <label className="block text-sm font-semibold text-gray-600 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Age</label>
+                    <p className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      {user?.profile?.age || "Not set"}
+                    </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Gender</label>
-                    <p className="text-xl font-semibold text-gray-900 capitalize">{user?.profile?.gender || "Not Set"}</p>
+                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                    <label className="block text-sm font-semibold text-gray-600 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Gender</label>
+                    <p className="text-2xl font-bold text-gray-900 capitalize" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      {user?.profile?.gender || "Not Set"}
+                    </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Weight</label>
-                    <p className="text-xl font-semibold text-gray-900">
+                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                    <label className="block text-sm font-semibold text-gray-600 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Weight</label>
+                    <p className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                       {user?.profile?.weight ? `${user.profile.weight} kg` : "Not set"}
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Height</label>
-                    <p className="text-xl font-semibold text-gray-900">
+                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                    <label className="block text-sm font-semibold text-gray-600 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Height</label>
+                    <p className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                       {user?.profile?.height ? `${user.profile.height} cm` : "Not set"}
                     </p>
                   </div>
@@ -342,9 +368,9 @@ const ProfilePage = () => {
 
                 {/* Activity Level */}
                 <div className="mb-8">
-                  <label className="block text-sm font-medium text-gray-600 mb-3">Activity Level</label>
-                  <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
-                    <p className="text-lg font-semibold text-emerald-800 capitalize">
+                  <label className="block text-sm font-semibold text-gray-600 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Activity Level</label>
+                  <div className="bg-green-50 rounded-2xl p-6 border border-green-200">
+                    <p className="text-xl font-bold text-green-800 capitalize" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                       {user?.profile?.activity_level?.replace("_", " ") || "Not Specified"}
                     </p>
                   </div>
@@ -352,56 +378,63 @@ const ProfilePage = () => {
 
                 {/* Dietary Preferences */}
                 <div className="mb-8">
-                  <label className="block text-sm font-medium text-gray-600 mb-3">Dietary Preferences</label>
+                  <label className="block text-sm font-semibold text-gray-600 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Dietary Preferences</label>
                   <div className="flex flex-wrap gap-3">
                     {user?.profile?.dietary_preferences?.length > 0 ? (
                       user.profile.dietary_preferences.map((pref, index) => (
                         <span
                           key={index}
-                          className="px-4 py-2 bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800 rounded-full text-sm font-medium border border-emerald-300 capitalize"
+                          className="px-4 py-3 bg-green-100 text-green-800 rounded-full text-sm font-semibold border border-green-200 capitalize"
+                          style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                         >
                           {pref.replace("_", " ")}
                         </span>
                       ))
                     ) : (
-                      <div className="bg-gray-100 rounded-xl p-4 w-full">
-                        <p className="text-gray-500 text-center">No dietary preferences specified</p>
-                      </div>
+                      <span className="px-4 py-3 bg-gray-100 text-gray-500 rounded-full text-sm font-semibold border border-gray-200" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                        No preferences set
+                      </span>
                     )}
                   </div>
                 </div>
 
                 {/* Health Goals */}
                 <div className="mb-8">
-                  <label className="block text-sm font-medium text-gray-600 mb-3">Health Goals</label>
+                  <label className="block text-sm font-semibold text-gray-600 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Health Goals</label>
                   <div className="flex flex-wrap gap-3">
                     {user?.profile?.health_goals?.length > 0 ? (
                       user.profile.health_goals.map((goal, index) => (
                         <span
                           key={index}
-                          className="px-4 py-2 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 rounded-full text-sm font-medium border border-amber-300 capitalize"
+                          className="px-4 py-3 bg-green-100 text-green-800 rounded-full text-sm font-semibold border border-green-200 capitalize"
+                          style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                         >
                           {goal.replace("_", " ")}
                         </span>
                       ))
                     ) : (
-                      <div className="bg-gray-100 rounded-xl p-4 w-full">
-                        <p className="text-gray-500 text-center">No health goals specified</p>
-                      </div>
+                      <span className="px-4 py-3 bg-gray-100 text-gray-500 rounded-full text-sm font-semibold border border-gray-200" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                        No health goals set
+                      </span>
                     )}
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
-                  <button 
+                <div className="flex space-x-6 pt-8">
+                  <button
                     onClick={() => setIsEditing(true)}
-                    className="flex-1 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-colors font-medium shadow-md"
+                    className="flex-1 bg-green-800 text-white py-4 px-8 rounded-2xl hover:bg-green-900 transition duration-200 font-bold text-lg shadow-lg"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                   >
-                    Update Profile Information
+                    Edit Profile
                   </button>
-                  <button className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors font-medium">
-                    Download Profile Data
+                  <button
+                    onClick={logout}
+                    className="flex-1 bg-red-600 text-white py-4 px-8 rounded-2xl hover:bg-red-700 transition duration-200 font-bold text-lg shadow-lg"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                  >
+                    Logout
                   </button>
                 </div>
               </>
