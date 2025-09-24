@@ -297,13 +297,13 @@ const Dashboard = () => {
               <div
                 key={index}
                 className={`flex items-start space-x-4 p-6 rounded-2xl transition-all duration-300 hover:scale-102 border-l-4 ${activity.type === 'success' ? 'bg-emerald-50 border-l-emerald-500 hover:bg-emerald-100' :
-                    activity.type === 'achievement' ? 'bg-yellow-50 border-l-yellow-500 hover:bg-yellow-100' :
-                      'bg-blue-50 border-l-blue-500 hover:bg-blue-100'
+                  activity.type === 'achievement' ? 'bg-yellow-50 border-l-yellow-500 hover:bg-yellow-100' :
+                    'bg-blue-50 border-l-blue-500 hover:bg-blue-100'
                   }`}
               >
                 <div className={`p-3 rounded-2xl shadow-md ${activity.type === 'success' ? 'bg-emerald-500' :
-                    activity.type === 'achievement' ? 'bg-yellow-500' :
-                      'bg-blue-500'
+                  activity.type === 'achievement' ? 'bg-yellow-500' :
+                    'bg-blue-500'
                   }`}>
                   <activity.icon className="w-5 h-5 text-white" />
                 </div>
@@ -322,93 +322,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Enhanced AI Suggestions with Health Imagery */}
-        <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">AI Health Insights</h2>
-              <p className="text-gray-600">Personalized recommendations just for you</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="flex -space-x-2">
-                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse delay-75"></div>
-                <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse delay-150"></div>
-              </div>
-              <span className="text-sm text-gray-500 font-medium">AI-Powered</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 group">
-              <div className="aspect-w-16 aspect-h-10 relative">
-                <img
-                  src="https://images.unsplash.com/photo-1506629905607-d7aba5676b67?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Man eating healthy nutrition"
-                  className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-blue-600 via-blue-500/80 to-transparent"></div>
-              </div>
-              <div className="absolute inset-0 p-6 flex flex-col justify-end text-white">
-                <div className="flex items-center mb-3">
-                  <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mr-3">
-                    <Brain className="text-white w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-lg">Smart Nutrition Tip</h3>
-                </div>
-                <p className="text-white/90 leading-relaxed">
-                  Based on your goals, try adding more omega-3 rich foods like salmon and walnuts.
-                  They'll boost your brain health and support your fitness journey! 🧠
-                </p>
-              </div>
-            </div>
 
-            <div className="relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 group">
-              <div className="aspect-w-16 aspect-h-10 relative">
-                <img
-                  src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Man preparing healthy recipe"
-                  className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-600 via-emerald-500/80 to-transparent"></div>
-              </div>
-              <div className="absolute inset-0 p-6 flex flex-col justify-end text-white">
-                <div className="flex items-center mb-3">
-                  <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mr-3">
-                    <Heart className="text-white w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-lg">Recipe of the Day</h3>
-                </div>
-                <p className="text-white/90 leading-relaxed">
-                  Mediterranean Power Bowl - packed with quinoa, fresh vegetables, and lean protein.
-                  Perfect for your macro goals and absolutely delicious! 🥗
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Motivational Health Quote */}
-        <div className="relative overflow-hidden rounded-3xl shadow-2xl h-64">
-          <div className="absolute inset-0">
-            <img
-              src="https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
-              alt="Man with healthy lifestyle motivation"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-900/80 via-gray-900/60 to-transparent"></div>
-          </div>
-          <div className="relative z-10 p-8 md:p-12">
-            <div className="max-w-2xl">
-              <blockquote className="text-2xl md:text-3xl font-bold text-white mb-6 leading-relaxed">
-                "Your body is your temple. Keep it pure and clean for the soul to reside in."
-              </blockquote>
-              <div className="flex items-center text-white/80">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full mr-3"></div>
-                <p className="text-lg">Take care of your body. It's the only place you have to live. 💚</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

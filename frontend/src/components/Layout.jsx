@@ -150,33 +150,6 @@ const Layout = ({ children }) => {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-4 lg:px-6">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-500 lg:hidden"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {navigation.find(item => item.href === location.pathname)?.name || 'Diet AI'}
-              </h1>
-            </div>
-            <div className="hidden lg:flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary-700">
-                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <span className="text-sm font-medium text-gray-700">{user?.name || 'User'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Page content */}
         <main className="p-4 lg:p-6">
           {children}
