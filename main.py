@@ -329,12 +329,18 @@ async def update_user_profile(
     """Update user profile"""
     try:
         # Validate profile data
-        from backend.utils.security import validate_user_profile
-        validated_data = validate_user_profile(profile_data)
+        from backend.utils.security import InputValidator
+        validation_result = InputValidator.validate_user_profile(profile_data)
+        
+        if not validation_result["is_valid"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Validation failed: {', '.join(validation_result['errors'])}"
+            )
         
         # Update the nested profile fields
         update_data = {}
-        for key, value in validated_data.items():
+        for key, value in profile_data.items():
             update_data[f"profile.{key}"] = value
         
         # Also update the updated_at timestamp
