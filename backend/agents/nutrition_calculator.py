@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from backend.agents.base_agent import BaseAgent
 from backend.models.user import User
 import re
-
+#sakindu
 class NutritionCalculatorAgent(BaseAgent):
     """Agent specialized in nutritional analysis using Nutritionix API"""
     
