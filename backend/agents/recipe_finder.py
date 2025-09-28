@@ -284,16 +284,18 @@ class RecipeFinderAgent(BaseAgent):
         response = f"**🍳 Recipe Search Results for '{query.title()}'**\n\n"
         response += f"Found {len(recipes)} delicious recipes:\n\n"
         
+        # Show details for the top 3 recipes
         for i, recipe in enumerate(recipes[:3], 1):  # Show top 3 in detail
             response += f"**{i}. {recipe['title']}** ⭐ Health Score: {recipe['health_score']}/100\n"
             response += f"⏱️ **Prep Time:** {recipe['ready_in_minutes']} minutes | 👥 **Serves:** {recipe['servings']}\n\n"
             
-            # Nutrition info
+            # Nutrition info (per serving) - show only if present
             nutrition = recipe.get('nutrition', {})
             if nutrition:
                 response += "**📊 Nutrition (per serving):**\n"
                 for key, data in nutrition.items():
                     if isinstance(data, dict):
+                        # Format numeric values to 1 decimal place
                         response += f"• {key.title()}: {data['amount']:.1f}{data['unit']}\n"
                 response += "\n"
             
