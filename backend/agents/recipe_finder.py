@@ -334,6 +334,7 @@ class RecipeFinderAgent(BaseAgent):
     async def _general_recipe_response(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle general recipe questions with AI and personalized user context"""
         
+        # If no message provided, set a helpful default prompt
         if not message:
             message = "Tell me about recipe finding and what you can help me with"
         
@@ -361,6 +362,7 @@ class RecipeFinderAgent(BaseAgent):
             """
             greeting = f"👋 Hi {user_profile.get('name', 'there')}! "
         
+        # Construct an AI prompt that requests recipe advice tailored to the user
         if is_recipe_request:
             prompt = f"""
             {user_context}
@@ -408,6 +410,7 @@ class RecipeFinderAgent(BaseAgent):
                 "status": "success"
             }
         except Exception as e:
+            # If the model call fails, log and return a helpful fallback message
             self.logger.error(f"Error generating AI response: {e}")
             fallback_greeting = f"Hi {user_profile.get('name', 'there')}! " if user_profile and user_profile.get('name') else "Hi there! "
             return {
@@ -419,9 +422,11 @@ class RecipeFinderAgent(BaseAgent):
     async def _get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user profile information for personalized responses"""
         try:
+            # If no user_id provided, can't fetch profile
             if not user_id:
                 return None
                 
+            # Assume User.get is an async ORM call that returns a user model    
             user = await User.get(user_id)
             if not user:
                 return None
