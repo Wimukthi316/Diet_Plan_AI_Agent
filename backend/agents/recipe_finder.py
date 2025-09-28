@@ -1,5 +1,8 @@
 """
 Recipe Finder Agent - Using Spoonacular API for comprehensive recipe data
+This file contains the RecipeFinderAgent class which searches recipes using the
+Spoonacular API and provides formatted responses. Below each line or logical
+block has an inline comment explaining what it does.
 """
 import os
 import requests
