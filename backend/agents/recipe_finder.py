@@ -108,18 +108,25 @@ class RecipeFinderAgent(BaseAgent):
                 query = match.group(1).strip()
                 # Clean up common words
                 query = re.sub(r'\b(the|a|an|some|of|in|with)\b', '', query).strip()
+                # Only accept queries longer than 2 characters to avoid nonsense captures
                 if query and len(query) > 2:
                     return query
         
         # Check if message looks like ingredients or food names
         food_keywords = ['chicken', 'beef', 'pasta', 'salmon', 'vegetarian', 'vegan', 'soup', 'salad', 'dessert']
         if any(keyword in message_lower for keyword in food_keywords):
+            # Return the original message as a fallback (unmodified casing)
             return message.strip()
-        
+        #If not query is found return none
         return None
     
     async def _search_spoonacular_recipes(self, query: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Search for recipes using Spoonacular API"""
+        """Search for recipes using Spoonacular API
+        
+        Note: This method is declared `async` but uses the synchronous `requests`
+        library which will block the event loop. Consider switching to an async
+        HTTP client (aiohttp or httpx) when using this in a real async app.
+        """
         try:
             # Build API parameters
             params = {
@@ -136,6 +143,7 @@ class RecipeFinderAgent(BaseAgent):
             user_profile = context.get('user_profile', {})
             if 'dietary_preferences' in user_profile:
                 diet_map = {
+                    # Map generic preference names to Spoonacular parameter names
                     'vegetarian': 'vegetarian',
                     'vegan': 'vegan',
                     'gluten-free': 'glutenFree',
@@ -145,10 +153,11 @@ class RecipeFinderAgent(BaseAgent):
                 }
                 
                 for pref in user_profile['dietary_preferences']:
+                    # If the user's preference exists in the map, add it as a boolean param
                     if pref.lower() in diet_map:
                         params[diet_map[pref.lower()]] = True
             
-            # Search recipes
+            # Search recipes using the complexSearch endpoint
             url = f"{self.base_url}/complexSearch"
             response = requests.get(url, params=params, timeout=10)
             
@@ -166,9 +175,13 @@ class RecipeFinderAgent(BaseAgent):
                         'ready_in_minutes': recipe.get('readyInMinutes', 'N/A'),
                         'servings': recipe.get('servings', 'N/A'),
                         'source_url': recipe.get('sourceUrl'),
+                        # Short summary: clean HTML and truncate to 200 chars
                         'summary': self._clean_html(recipe.get('summary', ''))[:200] + '...',
+                        # Ingredients: use human-readable "original" description
                         'ingredients': [ing.get('original', '') for ing in recipe.get('extendedIngredients', [])],
+                        # Nutrition extraction delegated to helper
                         'nutrition': self._extract_nutrition(recipe.get('nutrition', {})),
+                        # Instructions fetched via separate helper (note: extra HTTP call)
                         'instructions': self._get_recipe_instructions(recipe.get('id')) if recipe.get('id') else [],
                         'health_score': recipe.get('healthScore', 0),
                         'price_per_serving': recipe.get('pricePerServing', 0)
@@ -177,11 +190,14 @@ class RecipeFinderAgent(BaseAgent):
                 
                 return processed_recipes
             else:
+                # Log non-200 responses for debugging
                 self.logger.warning(f"Spoonacular API error: {response.status_code}")
                 
         except Exception as e:
+            # Catch and log network or parsing errors
             self.logger.error(f"Error calling Spoonacular API: {e}")
         
+        # On failure return empty list to indicate no results
         return []
     
     def _get_recipe_instructions(self, recipe_id: int) -> List[str]:
