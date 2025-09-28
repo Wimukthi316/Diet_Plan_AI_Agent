@@ -254,10 +254,9 @@ const ChatPage = () => {
   ];
 
   return (
-
-    <div className="max-w-6xl mx-auto">
-      {/* Modern Chat Container */}
-      <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden h-[calc(100vh-50px)] flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      {/* Modern Chat Container - Full Screen */}
+      <div className="bg-white flex-1 flex flex-col overflow-hidden h-full">
         {/* Modern Chat Header */}
         <div className="bg-green-800 px-8 py-6">
           <div className="flex items-center justify-between">
@@ -288,7 +287,7 @@ const ChatPage = () => {
         </div>
 
         {/* Modern Messages Container */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50 min-h-0">
           {/* Loading history indicator */}
           {isLoadingHistory && (
             <div className="flex justify-center items-center h-32">
@@ -386,18 +385,18 @@ const ChatPage = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Modern Suggested Prompts */}
+        {/* Minimized Suggested Prompts */}
         {messages.length === 1 && (
-          <div className="border-t border-gray-200 px-6 py-6 bg-white">
-            <p className="text-lg font-semibold text-gray-700 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+          <div className="border-t border-gray-200 px-4 py-3 bg-white">
+            <p className="text-sm font-medium text-gray-600 mb-2" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
               Try asking:
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               {suggestedPrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => setInputMessage(prompt)}
-                  className="px-4 py-2 bg-green-100 hover:bg-green-200 rounded-xl text-green-800 font-medium transition-all duration-200 border border-green-200 hover:border-green-300"
+                  className="px-3 py-1 bg-green-100 hover:bg-green-200 rounded-lg text-green-800 text-sm font-medium transition-all duration-200 border border-green-200 hover:border-green-300"
                   style={{ fontFamily: 'TASA Explorer, sans-serif' }}
                 >
                   {prompt}
@@ -405,9 +404,7 @@ const ChatPage = () => {
               ))}
             </div>
           </div>
-        )}
-
-        {/* Modern Input Section */}
+        )}        {/* Modern Input Section */}
         <div className="border-t border-gray-200 p-6 bg-white">
           <form onSubmit={handleSendMessage} className="flex gap-4">
             <input
@@ -422,7 +419,7 @@ const ChatPage = () => {
             <button
               type="submit"
               disabled={!inputMessage.trim() || isLoading}
-              className="bg-green-800 hover:bg-green-900 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg transition-all duration-200 flex items-center gap-2"
+              className="bg-green-800 hover:bg-green-900 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-2xl font-bold text-lg shadow-lg transition-all duration-200 flex items-center gap-2"
               style={{ fontFamily: 'TASA Explorer, sans-serif' }}
             >
               <Send className="w-5 h-5" />
@@ -432,7 +429,6 @@ const ChatPage = () => {
         </div>
       </div>
     </div>
-
   );
 };
 
