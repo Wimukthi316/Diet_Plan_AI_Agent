@@ -142,32 +142,9 @@ npm install
 npm run dev
 ```
 
-#### 4. Environment Configuration
 
-Create a `.env` file in the root directory:
 
-```env
-# Database Configuration
-MONGODB_URL=mongodb://localhost:27017/diet_ai
-DATABASE_NAME=diet_ai
-
-# JWT Configuration
-JWT_SECRET_KEY=your-super-secret-jwt-key
-JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=1440
-
-# Google AI Configuration
-GOOGLE_API_KEY=your-google-gemini-api-key
-
-# Server Configuration
-HOST=0.0.0.0
-PORT=8000
-
-# CORS Configuration
-FRONTEND_URL=http://localhost:3000
-```
-
-#### 5. Start the Application
+#### 4. Start the Application
 
 ```bash
 # Terminal 1: Start Backend (from root directory)
