@@ -4,16 +4,17 @@ This file contains the RecipeFinderAgent class which searches recipes using the
 Spoonacular API and provides formatted responses. Below each line or logical
 block has an inline comment explaining what it does.
 """
-import os
-import requests
-from typing import Dict, Any, List, Optional
-from backend.agents.base_agent import BaseAgent
-from backend.models.user import User
-from backend.utils.security import sanitize_input
-import re
+import os # used for reading environment variables (API key)
+import requests # synchronous HTTP client used to call Spoonacular endpoints
+from typing import Dict, Any, List, Optional # typing hints for readability and static analysis
+from backend.agents.base_agent import BaseAgent # base class provided by the project
+from backend.models.user import User # ORM / model to fetch user profile data
+from backend.utils.security import sanitize_input # helper to sanitize user-provided input
+import re # regex utilities used for parsing user messages
 
 class RecipeFinderAgent(BaseAgent):
     """Agent specialized in finding recipes using Spoonacular API"""
+    
     
     def __init__(self):
         super().__init__(
