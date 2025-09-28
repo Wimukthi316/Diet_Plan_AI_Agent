@@ -201,7 +201,11 @@ class RecipeFinderAgent(BaseAgent):
         return []
     
     def _get_recipe_instructions(self, recipe_id: int) -> List[str]:
-        """Get detailed instructions for a recipe"""
+        """Get detailed instructions for a recipe
+        
+        Fetches the analyzed Instructions endpoint and returns up to 8 step strings.
+        This method is synchronous and will block if called from an async context.
+        """
         try:
             url = f"{self.base_url}/{recipe_id}/analyzedInstructions"
             params = {'apiKey': self.spoonacular_api_key}
@@ -212,19 +216,26 @@ class RecipeFinderAgent(BaseAgent):
                 data = response.json()
                 instructions = []
                 
+                # Parse instruction sets and steps
                 for instruction_set in data:
                     for step in instruction_set.get('steps', []):
                         instructions.append(f"{step.get('number', '')}. {step.get('step', '')}")
                 
+                # Limit number of steps returned to keep results concise
                 return instructions[:8]  # Limit to 8 steps
                 
         except Exception as e:
+            # Log any errors when fetching step-by-step instructions
             self.logger.error(f"Error getting recipe instructions: {e}")
         
         return []
     
     def _extract_nutrition(self, nutrition_data: Dict) -> Dict[str, Any]:
-        """Extract key nutrition information"""
+        """Extract key nutrition information
+
+        The Spoonacular nutrition object contains a list of nutrient dicts; this
+        helper picks out a subset (calories, protein, carbs, fat, fiber, sugar, sodium).
+        """
         if not nutrition_data:
             return {}
         
@@ -242,6 +253,7 @@ class RecipeFinderAgent(BaseAgent):
             'Sodium': 'sodium'
         }
         
+        # Iterate over nutrients and populate nutrition_info for keys we care
         for nutrient in nutrients:
             name = nutrient.get('name', '')
             if name in nutrient_map:
@@ -259,10 +271,16 @@ class RecipeFinderAgent(BaseAgent):
         return re.sub(clean, '', text)
     
     def _format_recipe_response(self, recipes: List[Dict], query: str) -> str:
-        """Format recipes into readable response"""
+        """Format recipes into readable response
+        
+        reates a markdown-like string summarizing the top results and listing
+        quick nutrition, ingredients, and brief steps. Only the top 3 recipes
+        are shown in detail; the remainder are briefly listed.
+        """
         if not recipes:
             return f"I couldn't find any recipes for '{query}'. Try a different search term!"
         
+        # Header for formatted response
         response = f"**🍳 Recipe Search Results for '{query.title()}'**\n\n"
         response += f"Found {len(recipes)} delicious recipes:\n\n"
         
