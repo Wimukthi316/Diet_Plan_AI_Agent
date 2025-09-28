@@ -1,4 +1,4 @@
-# Diet Plan AI Agent 🥗🤖
+# Diet Plan AI Agent 🥗
 
 A sophisticated multi-agent AI system for personalized diet planning, nutrition analysis, and recipe recommendations. Built with modern web technologies and powered by advanced AI agents.
 
@@ -420,9 +420,6 @@ npm run test:e2e
 - Update documentation
 - Follow semantic versioning
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -432,26 +429,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **FastAPI** for the high-performance backend framework
 - **Tailwind CSS** for the beautiful UI components
 
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/Wimukthi316/Diet_Plan_AI_Agent/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Wimukthi316/Diet_Plan_AI_Agent/discussions)
-- **Email**: [wimukthi316@gmail.com](mailto:wimukthi316@gmail.com)
-
-## 🔮 Future Enhancements
-
-- [ ] Mobile application (React Native)
-- [ ] Advanced meal planning algorithms
-- [ ] Integration with fitness trackers
-- [ ] Social features and community
-- [ ] Nutritionist consultation booking
-- [ ] AI-powered grocery list generation
-- [ ] Voice interaction capabilities
-- [ ] Multi-language support
-
----
-
-<div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/Wimukthi316">Wimukthi316</a></p>
-  <p>⭐ Star this repository if you found it helpful!</p>
-</div>
