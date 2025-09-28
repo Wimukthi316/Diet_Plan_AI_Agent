@@ -173,31 +173,40 @@ export default function LandingPage() {
                 role: "Meal Planning Specialist",
                 description:
                   "Creates personalized meal plans based on your dietary preferences, restrictions, and health goals.",
-                avatar: "🥗",
+                image: "https://images.unsplash.com/photo-1547496502-affa22d38842?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80",
               },
               {
                 name: "HealthTracker",
                 role: "Progress Monitor",
                 description:
                   "Tracks your nutrition intake, monitors progress, and provides insights for continuous improvement.",
-                avatar: "📊",
+                image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80",
               },
               {
                 name: "WellnessCoach",
                 role: "Lifestyle Advisor",
                 description:
                   "Provides motivation, tips, and guidance to help you maintain healthy eating habits long-term.",
-                avatar: "💪",
+                image: "https://images.unsplash.com/photo-1498837167922-ddd27525d352?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80",
               },
             ].map((agent, index) => (
               <div
                 key={index}
-                className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-center group"
+                className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-center group border border-gray-100 hover:border-emerald-200 overflow-hidden"
               >
-                <div className="text-6xl mb-6">{agent.avatar}</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>{agent.name}</h3>
-                <p className="text-emerald-600 font-semibold mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>{agent.role}</p>
-                <p className="text-gray-600 leading-relaxed" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>{agent.description}</p>
+                <div className="relative h-48 w-full mb-6">
+                  <img
+                    src={agent.image}
+                    alt={agent.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                </div>
+                <div className="p-8 pt-0">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>{agent.name}</h3>
+                  <p className="text-emerald-600 font-semibold mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>{agent.role}</p>
+                  <p className="text-gray-600 leading-relaxed" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>{agent.description}</p>
+                </div>
               </div>
             ))}
           </div>
