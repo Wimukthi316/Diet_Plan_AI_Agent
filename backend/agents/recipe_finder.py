@@ -15,14 +15,15 @@ import re # regex utilities used for parsing user messages
 class RecipeFinderAgent(BaseAgent):
     """Agent specialized in finding recipes using Spoonacular API"""
     
-    
+    # The class inherits from BaseAgent to reuse common agent behavior (logging, model calls, etc.)
     def __init__(self):
         super().__init__(
             name="RecipeFinder",
             role="Recipe discovery, meal planning, and culinary guidance specialist",
             model_name="gemini-2.0-flash"
         )
-        
+
+        # List of capabilities this agent advertises
         self.capabilities = [
             "Recipe search via Spoonacular API",
             "Dietary preference filtering",
@@ -34,26 +35,37 @@ class RecipeFinderAgent(BaseAgent):
         ]
         
         # Spoonacular API configuration
-        self.spoonacular_api_key = os.getenv("SPOONACULAR_API_KEY")
-        self.base_url = "https://api.spoonacular.com/recipes"
+        self.spoonacular_api_key = os.getenv("SPOONACULAR_API_KEY") # read API key from environment (keep secret)
+        self.base_url = "https://api.spoonacular.com/recipes" # base endpoint for Spoonacular API
         
     async def process_request(self, request: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Process recipe-related requests"""
+        """Process recipe-related requests
+        This is the main entrypoint for incoming requests to the agent. It:
+        - sanitizes input,
+        - attempts to extract a recipe query,
+        - queries Spoonacular if appropriate, and
+        - falls back to AI-generated guidance for general questions.
+        """
         try:
+            # Sanitize the incoming message text to prevent injection attacks
             message = sanitize_input(request.get("message", ""))
+            # Determine request type, default to 'general' if not provided
             request_type = request.get("type", "general")
             
+            # If the message is empty, provide a general recipe help response
             if not message:
                 return await self._general_recipe_response("", context)
             
-            # Extract recipe query from message
+            # Extract recipe query from message (e.g., "chicken curry" or "recipes with potatoes")
             recipe_query = self._extract_recipe_query(message)
             
+            # If we found a query and the request is not explicitly 'general', call the Spoonacular API
             if recipe_query and request_type != "general":
-                # Get recipes from Spoonacular API
+                # Calls an async wrapper that actually uses synchronous requests (note: blocking)
                 recipes = await self._search_spoonacular_recipes(recipe_query, context)
                 
                 if recipes:
+                    # Format a human-friendly response and return structured payload
                     response = self._format_recipe_response(recipes, recipe_query)
                     return {
                         "agent": self.name,
@@ -67,14 +79,20 @@ class RecipeFinderAgent(BaseAgent):
             return await self._general_recipe_response(message, context)
                 
         except Exception as e:
+            # Log unexpected errors and return a helpful general response
             self.logger.error(f"Error in recipe finder: {e}")
             return await self._general_recipe_response(message, context)
     
     def _extract_recipe_query(self, message: str) -> Optional[str]:
-        """Extract recipe search query from user message"""
+        """Extract recipe search query from user message
+        Uses a set of regex patterns to capture likely user queries. If nothing
+        matches, falls back to checking for common food keywords.
+        Returns a cleaned query string or None.
+        """
+        # Normalize message for case-insensitive matching
         message_lower = message.lower()
         
-        # Check for recipe-specific patterns
+        # Patterns to match various natural-language ways of asking for recipes
         patterns = [
             r"(?:find|search|get|show).*?recipes?.*?(?:for|with|using)\s+(.+?)(?:\?|$)",
             r"recipes?.*?(?:for|with|using)\s+(.+?)(?:\?|$)",
@@ -83,6 +101,7 @@ class RecipeFinderAgent(BaseAgent):
             r"(.+?)\s+recipes?(?:\?|$)"
         ]
         
+        # Try each pattern in order and return the first meaningful capture group
         for pattern in patterns:
             match = re.search(pattern, message_lower)
             if match:
