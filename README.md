@@ -50,7 +50,7 @@ graph TB
         
         subgraph "Models"
             User[User Model]
-            Profile[Profile Model]
+            Diet[Diet Plan Model]
             Chat[Chat History]
             Nutrition[Nutrition Log]
         end
