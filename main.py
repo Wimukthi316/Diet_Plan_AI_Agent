@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from backend.models.database import init_database
 from backend.models.user import User
 from backend.models.chat_history import ChatMessage
+from backend.models.meal import Meal
 from backend.services.auth import AuthService
 from backend.agents.coordinator import AgentCoordinator
 from backend.utils.security import verify_token
@@ -149,16 +150,29 @@ async def login(credentials: dict):
     """User login endpoint"""
     try:
         # Validate required fields
-        if not credentials.get("email") or not credentials.get("password"):
+        email = credentials.get("email", "").strip()
+        password = credentials.get("password", "")
+        
+        if not email:
             raise HTTPException(
                 status_code=400, 
-                detail="Email and password are required"
+                detail="Please enter your email address"
             )
         
-        token = await auth_service.authenticate_user(
-            credentials.get("email"), 
-            credentials.get("password")
-        )
+        if not password:
+            raise HTTPException(
+                status_code=400, 
+                detail="Please enter your password"
+            )
+            
+        # Basic email format validation
+        if "@" not in email:
+            raise HTTPException(
+                status_code=400, 
+                detail="Please enter a valid email address"
+            )
+        
+        token = await auth_service.authenticate_user(email, password)
         return {
             "access_token": token, 
             "token_type": "bearer",
@@ -168,7 +182,7 @@ async def login(credentials: dict):
         raise HTTPException(status_code=401, detail=str(e))
     except Exception as e:
         logger.error(f"Login error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error during login")
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again or contact support if the problem persists.")
 
 def format_response_for_history(response_data: dict) -> str:
     """Format the multi-agent response for chat history storage"""
@@ -367,6 +381,140 @@ async def update_user_profile(
     except Exception as e:
         logger.error(f"Error updating profile: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+# =====================================================
+# MEAL TRACKING ENDPOINTS
+# =====================================================
+
+@app.post("/nutrition/meals")
+async def add_meal(meal_data: dict, current_user: User = Depends(get_current_user)):
+    """Add a new meal entry"""
+    try:
+        # Create meal document
+        meal = Meal(
+            user_id=current_user.id,
+            meal_name=meal_data.get("meal_name"),
+            meal_type=meal_data.get("meal_type", "snack"),
+            calories=float(meal_data.get("calories", 0)),
+            protein=float(meal_data.get("protein", 0)),
+            carbs=float(meal_data.get("carbs", 0)),
+            fats=float(meal_data.get("fats", 0)),
+            fiber=float(meal_data.get("fiber", 0)),
+            serving_size=meal_data.get("serving_size"),
+            notes=meal_data.get("notes"),
+            date=meal_data.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
+        )
+        
+        await meal.insert()
+        
+        return {
+            "message": "Meal added successfully",
+            "meal": {
+                "id": str(meal.id),
+                "meal_name": meal.meal_name,
+                "meal_type": meal.meal_type,
+                "calories": meal.calories,
+                "protein": meal.protein,
+                "carbs": meal.carbs,
+                "fats": meal.fats,
+                "fiber": meal.fiber,
+                "serving_size": meal.serving_size,
+                "notes": meal.notes,
+                "date": meal.date
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error adding meal: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to add meal: {str(e)}")
+
+@app.get("/nutrition/meals")
+async def get_meals(date: str = None, current_user: User = Depends(get_current_user)):
+    """Get meals for a specific date or all meals"""
+    try:
+        query = {"user_id": current_user.id}
+        
+        if date:
+            query["date"] = date
+        
+        meals = await Meal.find(query).sort("-created_at").to_list()
+        
+        return [
+            {
+                "id": str(meal.id),
+                "_id": str(meal.id),
+                "meal_name": meal.meal_name,
+                "meal_type": meal.meal_type,
+                "calories": meal.calories,
+                "protein": meal.protein,
+                "carbs": meal.carbs,
+                "fats": meal.fats,
+                "fiber": meal.fiber,
+                "serving_size": meal.serving_size,
+                "notes": meal.notes,
+                "date": meal.date,
+                "created_at": meal.created_at.isoformat()
+            }
+            for meal in meals
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching meals: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch meals: {str(e)}")
+
+@app.delete("/nutrition/meals/{meal_id}")
+async def delete_meal(meal_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a meal entry"""
+    try:
+        from bson import ObjectId
+        
+        meal = await Meal.get(ObjectId(meal_id))
+        
+        if not meal:
+            raise HTTPException(status_code=404, detail="Meal not found")
+        
+        # Verify the meal belongs to the current user
+        if meal.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this meal")
+        
+        await meal.delete()
+        
+        return {"message": "Meal deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting meal: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete meal: {str(e)}")
+
+@app.get("/nutrition/meals/summary/{date}")
+async def get_daily_summary(date: str, current_user: User = Depends(get_current_user)):
+    """Get nutritional summary for a specific date"""
+    try:
+        meals = await Meal.find({"user_id": current_user.id, "date": date}).to_list()
+        
+        if not meals:
+            return {
+                "date": date,
+                "total_calories": 0,
+                "total_protein": 0,
+                "total_carbs": 0,
+                "total_fats": 0,
+                "total_fiber": 0,
+                "meal_count": 0
+            }
+        
+        summary = {
+            "date": date,
+            "total_calories": sum(meal.calories for meal in meals),
+            "total_protein": sum(meal.protein for meal in meals),
+            "total_carbs": sum(meal.carbs for meal in meals),
+            "total_fats": sum(meal.fats for meal in meals),
+            "total_fiber": sum(meal.fiber for meal in meals),
+            "meal_count": len(meals)
+        }
+        
+        return summary
+    except Exception as e:
+        logger.error(f"Error getting daily summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get summary: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(

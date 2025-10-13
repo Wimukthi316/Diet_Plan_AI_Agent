@@ -12,6 +12,8 @@ const LoginPage = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loginError, setLoginError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const { login, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -21,12 +23,23 @@ const LoginPage = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
+    // Clear field-specific error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: ''
       }));
+    }
+    // Clear field-specific login errors when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+    // Clear general login error only when user starts typing in password field or makes substantial changes to email
+    if (loginError && ((name === 'password' && value.length > 0) || (name === 'email' && value.length > 3))) {
+      setLoginError('');
     }
 
     // Real-time validation for email
@@ -68,9 +81,31 @@ const LoginPage = () => {
 
     if (!validateForm()) return;
 
-    const success = await login(formData.email, formData.password);
-    if (success) {
+    // Clear any previous errors
+    setLoginError('');
+    setFieldErrors({});
+
+    const result = await login(formData.email, formData.password);
+    if (result.success) {
       navigate('/dashboard');
+    } else {
+      // Set field-specific error messages based on the error type
+      const errorMessage = result.error;
+      
+      if (errorMessage.includes('No account found') || errorMessage.includes('email')) {
+        setFieldErrors(prev => ({
+          ...prev,
+          email: 'No account found with this email address'
+        }));
+      } else if (errorMessage.includes('Incorrect password') || errorMessage.includes('password')) {
+        setFieldErrors(prev => ({
+          ...prev,
+          password: 'Incorrect password. Please try again.'
+        }));
+      } else {
+        // For other errors, show general message
+        setLoginError(errorMessage);
+      }
     }
   };
 
@@ -151,7 +186,7 @@ const LoginPage = () => {
                       id="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className={`w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${errors.email
+                      className={`w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${(errors.email || fieldErrors.email)
                         ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
                         : "border-gray-200 hover:border-gray-300"
                         }`}
@@ -159,10 +194,10 @@ const LoginPage = () => {
                       autoComplete="email"
                     />
                   </div>
-                  {errors.email && (
+                  {(errors.email || fieldErrors.email) && (
                     <p className="mt-2 text-sm text-red-600 font-medium flex items-center">
                       <XCircle className="w-4 h-4 mr-1" />
-                      {errors.email}
+                      {errors.email || fieldErrors.email}
                     </p>
                   )}
                 </div>
@@ -180,7 +215,7 @@ const LoginPage = () => {
                       id="password"
                       value={formData.password}
                       onChange={handleChange}
-                      className={`w-full pl-10 sm:pl-12 pr-14 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${errors.password
+                      className={`w-full pl-10 sm:pl-12 pr-14 py-3 sm:py-4 border-2 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 backdrop-blur-sm placeholder-gray-400 text-gray-900 font-medium ${(errors.password || fieldErrors.password)
                         ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
                         : "border-gray-200 hover:border-gray-300"
                         }`}
@@ -195,13 +230,46 @@ const LoginPage = () => {
                       {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </button>
                   </div>
-                  {errors.password && (
+                  {(errors.password || fieldErrors.password) && (
                     <p className="mt-2 text-sm text-red-600 font-medium flex items-center">
                       <XCircle className="w-4 h-4 mr-1" />
-                      {errors.password}
+                      {errors.password || fieldErrors.password}
                     </p>
                   )}
                 </div>
+
+                {/* Login Error Message */}
+                {loginError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl transition-all duration-300 relative">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start flex-1">
+                        <XCircle className="w-4 h-4 mr-2 text-red-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm text-red-700 font-medium">
+                            {loginError}
+                          </p>
+                          {loginError.includes('email') && (
+                            <p className="text-xs text-red-600 mt-2">
+                              💡 Make sure you're using the same email address you registered with.
+                            </p>
+                          )}
+                          {loginError.includes('password') && (
+                            <p className="text-xs text-red-600 mt-2">
+                              💡 Passwords are case-sensitive. Check your Caps Lock key.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setLoginError('')}
+                        className="ml-2 text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Remember Me & Forgot Password */}
                 <div className="flex items-center justify-between">
