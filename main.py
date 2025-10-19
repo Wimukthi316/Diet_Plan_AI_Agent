@@ -19,6 +19,7 @@ from backend.models.chat_history import ChatMessage
 from backend.models.meal import Meal
 from backend.services.auth import AuthService
 from backend.agents.coordinator import AgentCoordinator
+from backend.agents.diet_tracker import DietTrackerAgent
 from backend.utils.security import verify_token
 
 # Load environment variables
@@ -69,6 +70,7 @@ app.add_middleware(
 # Initialize services
 auth_service = AuthService()
 agent_coordinator = AgentCoordinator()
+diet_tracker_agent = DietTrackerAgent()
 
 # Dependency for authentication
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -515,6 +517,33 @@ async def get_daily_summary(date: str, current_user: User = Depends(get_current_
     except Exception as e:
         logger.error(f"Error getting daily summary: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get summary: {str(e)}")
+
+@app.post("/nutrition/analyze-and-suggest")
+async def analyze_and_suggest_meals(
+    request_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Analyze user's daily food intake against their health goals and provide suggestions.
+    This endpoint uses AI to evaluate eating patterns and recommend improvements.
+    """
+    try:
+        date = request_data.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
+        
+        # Use the diet tracker agent to analyze intake and suggest meals
+        analysis = await diet_tracker_agent.analyze_daily_intake_and_suggest(
+            user_id=str(current_user.id),
+            date=date
+        )
+        
+        return analysis
+        
+    except Exception as e:
+        logger.error(f"Error analyzing daily intake: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze daily intake: {str(e)}"
+        )
 
 if __name__ == "__main__":
     uvicorn.run(

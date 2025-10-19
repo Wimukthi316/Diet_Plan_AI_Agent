@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from backend.agents.base_agent import BaseAgent
 from backend.models.nutrition_log import NutritionLog
+from backend.models.meal import Meal
 from backend.models.user import User
 
 class DietTrackerAgent(BaseAgent):
@@ -130,7 +131,7 @@ class DietTrackerAgent(BaseAgent):
         else:  # monthly
             return await self._monthly_analysis(logs, context)
     
-    async def _daily_analysis(self, logs: List[NutritionLog], context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _daily_analysis(self, logs: List, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze daily progress"""
         totals = self._calculate_totals(logs)
         meal_breakdown = self._group_by_meal(logs)
@@ -155,7 +156,7 @@ class DietTrackerAgent(BaseAgent):
         
         return {"agent": self.name, "response": response, "daily_data": totals, "status": "success"}
     
-    async def _weekly_analysis(self, logs: List[NutritionLog], context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _weekly_analysis(self, logs: List, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze weekly progress"""
         daily_data = self._group_by_day(logs)
         total_days = len(daily_data)
@@ -190,7 +191,7 @@ class DietTrackerAgent(BaseAgent):
             "status": "success"
         }
     
-    async def _monthly_analysis(self, logs: List[NutritionLog], context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _monthly_analysis(self, logs: List, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze monthly progress"""
         unique_days = len(set(log.date.date() for log in logs))
         total_entries = len(logs)
@@ -458,19 +459,57 @@ class DietTrackerAgent(BaseAgent):
     
     # Helper methods - streamlined and consolidated
     
-    async def _get_nutrition_logs(self, user_id: str, days: int = 7) -> List[NutritionLog]:
-        """Get nutrition logs for specified days"""
+    async def _get_nutrition_logs(self, user_id: str, days: int = 7) -> List:
+        """Get nutrition logs for specified days from both NutritionLog and Meal models"""
         try:
+            from bson import ObjectId
             start_date = datetime.now() - timedelta(days=days)
-            return await NutritionLog.find(
+            
+            # Get nutrition logs (old format)
+            nutrition_logs = await NutritionLog.find(
                 NutritionLog.user_id == user_id,
                 NutritionLog.date >= start_date
             ).sort(-NutritionLog.date).to_list()
+            
+            # Get meals (new format) and convert them to log-like objects
+            start_date_str = start_date.strftime("%Y-%m-%d")
+            meals = await Meal.find({
+                "user_id": ObjectId(user_id),
+                "date": {"$gte": start_date_str}
+            }).to_list()
+            
+            # Convert Meal objects to a compatible format with NutritionLog
+            converted_meals = []
+            for meal in meals:
+                # Create a mock NutritionLog-like object from Meal
+                class MealAsLog:
+                    def __init__(self, meal):
+                        self.calories = meal.calories
+                        self.protein = meal.protein
+                        self.carbs = meal.carbs
+                        self.fat = meal.fats  # Note: Meal uses 'fats' but NutritionLog uses 'fat'
+                        self.fiber = meal.fiber or 0
+                        self.sodium = 0  # Meal doesn't track sodium
+                        self.meal_type = meal.meal_type
+                        # Convert date string to datetime for consistency
+                        try:
+                            self.date = datetime.strptime(meal.date, "%Y-%m-%d")
+                        except:
+                            self.date = datetime.now()
+                        self.created_at = meal.created_at
+                
+                converted_meals.append(MealAsLog(meal))
+            
+            # Combine and sort by date
+            all_logs = nutrition_logs + converted_meals
+            all_logs.sort(key=lambda x: x.date, reverse=True)
+            
+            return all_logs
         except Exception as e:
             self.logger.error(f"Error getting nutrition logs: {e}")
             return []
     
-    def _calculate_totals(self, logs: List[NutritionLog]) -> Dict[str, float]:
+    def _calculate_totals(self, logs: List) -> Dict[str, float]:
         """Calculate nutrition totals from logs"""
         return {
             'calories': sum(log.calories for log in logs),
@@ -481,7 +520,7 @@ class DietTrackerAgent(BaseAgent):
             'sodium': sum(log.sodium for log in logs)
         }
     
-    def _group_by_meal(self, logs: List[NutritionLog]) -> Dict[str, List[NutritionLog]]:
+    def _group_by_meal(self, logs: List) -> Dict[str, List]:
         """Group logs by meal type"""
         meal_groups = {}
         for log in logs:
@@ -489,7 +528,7 @@ class DietTrackerAgent(BaseAgent):
             meal_groups.setdefault(meal_type, []).append(log)
         return meal_groups
     
-    def _group_by_day(self, logs: List[NutritionLog]) -> Dict[str, Dict[str, Any]]:
+    def _group_by_day(self, logs: List) -> Dict[str, Dict[str, Any]]:
         """Group logs by day and calculate daily totals"""
         daily_data = {}
         for log in logs:
@@ -505,7 +544,7 @@ class DietTrackerAgent(BaseAgent):
         
         return daily_data
     
-    def _identify_patterns(self, logs: List[NutritionLog]) -> Dict[str, Any]:
+    def _identify_patterns(self, logs: List) -> Dict[str, Any]:
         """Identify eating patterns from logs"""
         if not logs:
             return {}
@@ -562,6 +601,139 @@ class DietTrackerAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error generating insights: {e}")
             return "Continue tracking consistently for better insights!"
+    
+    async def analyze_daily_intake_and_suggest(self, user_id: str, date: str = None) -> Dict[str, Any]:
+        """
+        Analyze user's daily food intake against their health goals and dietary preferences.
+        Provide personalized feedback and meal suggestions.
+        """
+        try:
+            # Use today's date if not specified
+            if not date:
+                date = datetime.now().strftime("%Y-%m-%d")
+            
+            # Get user profile for goals and preferences
+            user_profile = await self._get_user_profile(user_id)
+            if not user_profile:
+                return {
+                    "agent": self.name,
+                    "response": "Unable to retrieve user profile. Please ensure your profile is set up.",
+                    "status": "error"
+                }
+            
+            # Get today's meals
+            from bson import ObjectId
+            meals = await Meal.find({
+                "user_id": ObjectId(user_id),
+                "date": date
+            }).to_list()
+            
+            # Calculate personalized goals
+            personalized_goals = await self._calculate_personalized_goals(user_profile)
+            if not personalized_goals:
+                personalized_goals = {'calories': 2000, 'protein': 150, 'carbs': 250, 'fat': 65}
+            
+            # Calculate today's totals
+            totals = {
+                'calories': sum(meal.calories for meal in meals),
+                'protein': sum(meal.protein for meal in meals),
+                'carbs': sum(meal.carbs for meal in meals),
+                'fats': sum(meal.fats for meal in meals),
+                'fiber': sum(meal.fiber or 0 for meal in meals)
+            }
+            
+            # Extract user information
+            name = user_profile.get('name', 'there')
+            health_goals = user_profile.get('health_goals', [])
+            dietary_prefs = user_profile.get('dietary_preferences', [])
+            
+            # Build comprehensive analysis prompt
+            analysis_prompt = f"""
+            You are a professional nutrition advisor analyzing a user's daily food intake.
+            
+            **User Profile:**
+            - Name: {name}
+            - Health Goals: {', '.join(health_goals) if health_goals else 'General wellness'}
+            - Dietary Preferences: {', '.join(dietary_prefs) if dietary_prefs else 'None specified'}
+            - Activity Level: {user_profile.get('activity_level', 'Not specified')}
+            - Weight: {user_profile.get('weight', 'Not specified')} kg
+            
+            **Today's Food Intake ({date}):**
+            - Meals Logged: {len(meals)}
+            {"".join([f"  • {meal.meal_name} ({meal.meal_type}): {meal.calories} kcal, {meal.protein}g protein, {meal.carbs}g carbs, {meal.fats}g fat" for meal in meals]) if meals else "  • No meals logged yet"}
+            
+            **Daily Totals:**
+            - Calories: {totals['calories']:.0f} kcal (Goal: {personalized_goals['calories']} kcal)
+            - Protein: {totals['protein']:.1f}g (Goal: {personalized_goals['protein']}g)
+            - Carbs: {totals['carbs']:.1f}g (Goal: {personalized_goals['carbs']}g)
+            - Fats: {totals['fats']:.1f}g (Goal: {personalized_goals['fat']}g)
+            - Fiber: {totals['fiber']:.1f}g
+            
+            **Analysis Required:**
+            
+            1. **Eating Assessment**: Tell the user if they are eating well or poorly based on their health goals:
+               - Compare actual intake with personalized goals
+               - Consider their specific health goals ({', '.join(health_goals) if health_goals else 'general health'})
+               - Be specific about what's good and what needs improvement
+            
+            2. **Goal Alignment**: Analyze how well their intake aligns with their goals:
+               {"- For muscle gain: Are they getting enough protein and calories?" if any(g in ['muscle_gain', 'weight_gain'] for g in health_goals) else ""}
+               {"- For weight loss: Are they in a calorie deficit while maintaining protein?" if any(g in ['weight_loss', 'fat_loss'] for g in health_goals) else ""}
+               {"- For general wellness: Is their nutrition balanced?" if 'general_wellness' in health_goals or not health_goals else ""}
+            
+            3. **Specific Meal Suggestions**: Provide 3-4 specific meal recommendations that:
+               - Help them reach their daily goals
+               - Align with their dietary preferences ({', '.join(dietary_prefs) if dietary_prefs else 'no restrictions'})
+               - Address any nutritional gaps
+               - Are practical and easy to prepare
+            
+            4. **Actionable Feedback**: Give clear, encouraging feedback about:
+               - What they're doing well
+               - What needs improvement
+               - Why these changes matter for their goals
+            
+            Format your response in a clear, encouraging manner with sections:
+            - **📊 Today's Performance**
+            - **🎯 Goal Alignment**
+            - **🍽️ Meal Suggestions**
+            - **💡 Recommendations**
+            
+            Be honest but encouraging. Use emojis for readability.
+            """
+            
+            # Generate AI analysis
+            ai_response = await self.generate_response(analysis_prompt, {})
+            
+            # Calculate progress percentages
+            progress = {
+                'calories': round((totals['calories'] / personalized_goals['calories']) * 100, 1),
+                'protein': round((totals['protein'] / personalized_goals['protein']) * 100, 1),
+                'carbs': round((totals['carbs'] / personalized_goals['carbs']) * 100, 1),
+                'fats': round((totals['fats'] / personalized_goals['fat']) * 100, 1)
+            }
+            
+            return {
+                "agent": self.name,
+                "response": ai_response,
+                "analysis_data": {
+                    "date": date,
+                    "meals_count": len(meals),
+                    "totals": totals,
+                    "goals": personalized_goals,
+                    "progress": progress,
+                    "health_goals": health_goals,
+                    "dietary_preferences": dietary_prefs
+                },
+                "status": "success"
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error analyzing daily intake: {e}")
+            return {
+                "agent": self.name,
+                "response": f"I encountered an error analyzing your food intake: {str(e)}",
+                "status": "error"
+            }
     
     def get_agent_description(self) -> Dict[str, Any]:
         """Get agent description and capabilities"""

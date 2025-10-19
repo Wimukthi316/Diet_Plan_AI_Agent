@@ -32,6 +32,8 @@ const ProfilePage = () => {
     notes: ''
   })
   const [todaysMeals, setTodaysMeals] = useState([])
+  const [aiAnalysis, setAiAnalysis] = useState(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   // Load profile data when component mounts or user changes
   useEffect(() => {
@@ -114,6 +116,21 @@ const ProfilePage = () => {
     } catch (error) {
       toast.error('Failed to delete meal')
       console.error('Error deleting meal:', error)
+    }
+  }
+
+  const handleAnalyzeIntake = async () => {
+    try {
+      setIsAnalyzing(true)
+      const today = new Date().toISOString().split('T')[0]
+      const response = await api.post('/nutrition/analyze-and-suggest', { date: today })
+      setAiAnalysis(response.data)
+      toast.success('AI analysis complete!')
+    } catch (error) {
+      toast.error('Failed to analyze intake')
+      console.error('Error analyzing intake:', error)
+    } finally {
+      setIsAnalyzing(false)
     }
   }
 
@@ -729,9 +746,33 @@ const ProfilePage = () => {
 
             {/* Today's Meals List */}
             <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-6" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-                Today's Meals ({todaysMeals.length})
-              </h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                  Today's Meals ({todaysMeals.length})
+                </h3>
+                {todaysMeals.length > 0 && (
+                  <button
+                    onClick={handleAnalyzeIntake}
+                    disabled={isAnalyzing}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        🤖 AI Analyze & Suggest
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
 
               {todaysMeals.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
@@ -816,6 +857,66 @@ const ProfilePage = () => {
                 </div>
               )}
             </div>
+
+            {/* AI Analysis & Suggestions */}
+            {aiAnalysis && aiAnalysis.response && (
+              <div className="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl font-bold text-blue-900" style={{ fontFamily: 'Merienda, cursive' }}>
+                    🤖 AI Diet Analysis & Suggestions
+                  </h3>
+                  <button
+                    onClick={() => setAiAnalysis(null)}
+                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div className="prose prose-sm max-w-none">
+                    <div className="whitespace-pre-wrap text-gray-800" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      {aiAnalysis.response}
+                    </div>
+                  </div>
+                  
+                  {aiAnalysis.analysis_data && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <h4 className="font-bold text-gray-900 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                        📊 Progress Summary
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {Object.entries(aiAnalysis.analysis_data.progress || {}).map(([nutrient, percentage]) => (
+                          <div key={nutrient} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-600 mb-1 capitalize" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              {nutrient}
+                            </p>
+                            <div className="flex items-baseline gap-1">
+                              <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                                {percentage}%
+                              </p>
+                              <p className="text-xs text-gray-500">of goal</p>
+                            </div>
+                            <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  percentage >= 90 && percentage <= 110
+                                    ? 'bg-green-500'
+                                    : percentage < 90
+                                    ? 'bg-yellow-500'
+                                    : 'bg-orange-500'
+                                }`}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
