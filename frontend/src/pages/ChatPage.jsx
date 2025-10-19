@@ -121,6 +121,48 @@ const ChatPage = () => {
     await loadSessionMessages(sessionId);
   };
 
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      await chatAPI.deleteSession(sessionId);
+      const updatedSessions = sessions.filter(s => s.id !== sessionId);
+      setSessions(updatedSessions);
+      
+      // If deleted session was active, switch to another
+      if (activeSession?.id === sessionId) {
+        if (updatedSessions.length > 0) {
+          await loadSessionMessages(updatedSessions[0].id);
+        } else {
+          await createNewSession();
+        }
+      }
+      
+      toast.success('Chat deleted');
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast.error('Failed to delete chat');
+    }
+  };
+
+  const handleRenameSession = async (sessionId, newTitle) => {
+    try {
+      await chatAPI.updateSessionTitle(sessionId, newTitle);
+      const updatedSessions = sessions.map(s => 
+        s.id === sessionId ? { ...s, title: newTitle } : s
+      );
+      setSessions(updatedSessions);
+      
+      // Update active session if it's the one being renamed
+      if (activeSession?.id === sessionId) {
+        setActiveSession({ ...activeSession, title: newTitle });
+      }
+      
+      toast.success('Chat renamed');
+    } catch (error) {
+      console.error('Error renaming session:', error);
+      toast.error('Failed to rename chat');
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || isLoading) return;
@@ -229,6 +271,8 @@ const ChatPage = () => {
       activeSessionId={activeSession?.id}
       onSessionClick={handleSessionClick}
       onNewSession={createNewSession}
+      onDeleteSession={handleDeleteSession}
+      onRenameSession={handleRenameSession}
     >
       <div className="h-[calc(100vh-120px)]">
         {/* Main Chat Area */}
