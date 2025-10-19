@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader, Trash2, MessageCircle, Plus, Edit2, Check, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Send, Bot, User, Loader, MessageCircle } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
@@ -11,9 +11,6 @@ const ChatPage = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
-  const [editingSessionId, setEditingSessionId] = useState(null);
-  const [editingTitle, setEditingTitle] = useState('');
-  const [showSessions, setShowSessions] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -124,64 +121,6 @@ const ChatPage = () => {
     await loadSessionMessages(sessionId);
   };
 
-  const handleDeleteSession = async (sessionId, e) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this chat?')) return;
-
-    try {
-      await chatAPI.deleteSession(sessionId);
-      const updatedSessions = sessions.filter(s => s.id !== sessionId);
-      setSessions(updatedSessions);
-      
-      // If deleted session was active, switch to another
-      if (activeSession?.id === sessionId) {
-        if (updatedSessions.length > 0) {
-          await loadSessionMessages(updatedSessions[0].id);
-        } else {
-          await createNewSession();
-        }
-      }
-      
-      toast.success('Chat deleted');
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      toast.error('Failed to delete chat');
-    }
-  };
-
-  const startEditingTitle = (session, e) => {
-    e.stopPropagation();
-    setEditingSessionId(session.id);
-    setEditingTitle(session.title);
-  };
-
-  const saveSessionTitle = async (sessionId) => {
-    if (!editingTitle.trim()) {
-      setEditingSessionId(null);
-      return;
-    }
-
-    try {
-      await chatAPI.updateSessionTitle(sessionId, editingTitle);
-      setSessions(sessions.map(s => 
-        s.id === sessionId ? { ...s, title: editingTitle } : s
-      ));
-      if (activeSession?.id === sessionId) {
-        setActiveSession({ ...activeSession, title: editingTitle });
-      }
-      setEditingSessionId(null);
-      toast.success('Title updated');
-    } catch (error) {
-      console.error('Error updating title:', error);
-      toast.error('Failed to update title');
-    }
-  };
-
-  const cancelEditingTitle = () => {
-    setEditingSessionId(null);
-    setEditingTitle('');
-  };
-
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || isLoading) return;
@@ -276,17 +215,6 @@ const ChatPage = () => {
     });
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString();
-  };
-
   const suggestedPrompts = [
     "Analyze the nutrition in a banana",
     "Find me a healthy recipe for dinner",
@@ -302,147 +230,9 @@ const ChatPage = () => {
       onSessionClick={handleSessionClick}
       onNewSession={createNewSession}
     >
-      <div className="relative h-[calc(100vh-120px)]">
-      {/* Collapsible Sessions Sidebar */}
-      <div 
-        className={`fixed top-[80px] left-[288px] bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ease-in-out z-20 ${
-          showSessions ? 'w-80 translate-x-0' : 'w-0 -translate-x-full'
-        } h-[calc(100vh-80px)] overflow-hidden`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Sessions Header */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <button
-              onClick={createNewSession}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-800 hover:bg-green-900 text-white rounded-xl transition-all duration-200 font-semibold shadow-md"
-              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-            >
-              <Plus className="w-5 h-5" />
-              New Chat
-            </button>
-          </div>
-
-          {/* Sessions List */}
-          <div className="flex-1 overflow-y-auto p-3">
-            {isLoadingSessions ? (
-              <div className="flex justify-center items-center h-32">
-                <Loader className="w-6 h-6 animate-spin text-green-600" />
-              </div>
-            ) : sessions.length === 0 ? (
-              <div className="text-center text-gray-400 py-8 px-4">
-                <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">No chats yet</p>
-              </div>
-            ) : (
-              sessions.map((session) => (
-                <div
-                  key={session.id}
-                  onClick={() => handleSessionClick(session.id)}
-                  className={`group relative p-3 mb-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                    activeSession?.id === session.id
-                      ? 'bg-green-50 border-2 border-green-500'
-                      : 'hover:bg-gray-50 border-2 border-transparent'
-                  }`}
-                >
-                  {editingSessionId === session.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveSessionTitle(session.id);
-                          if (e.key === 'Escape') cancelEditingTitle();
-                        }}
-                        className="flex-1 bg-white border border-gray-300 text-gray-800 px-2 py-1 rounded text-sm"
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          saveSessionTitle(session.id);
-                        }}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cancelEditingTitle();
-                        }}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MessageCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
-                            <h3
-                              className="text-sm font-medium truncate text-gray-800"
-                              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                            >
-                              {session.title}
-                            </h3>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <span>{session.message_count} messages</span>
-                            <span>•</span>
-                            <span>{formatDate(session.updated_at)}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => startEditingTitle(session, e)}
-                            className="p-1 hover:bg-gray-200 rounded"
-                            title="Edit title"
-                          >
-                            <Edit2 className="w-3 h-3 text-gray-600" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteSession(session.id, e)}
-                            className="p-1 hover:bg-red-100 rounded"
-                            title="Delete chat"
-                          >
-                            <Trash2 className="w-3 h-3 text-red-600" />
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Sessions Footer */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
-            <div className="text-xs text-gray-500 text-center">
-              <p className="font-semibold" style={{ fontFamily: 'Merienda, cursive' }}>
-                Chat History
-              </p>
-              <p className="mt-1">{sessions.length} conversation{sessions.length !== 1 ? 's' : ''}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Toggle Sessions Button */}
-      <button
-        onClick={() => setShowSessions(!showSessions)}
-        className={`fixed top-[100px] ${showSessions ? 'left-[656px]' : 'left-[288px]'} z-30 bg-green-800 hover:bg-green-900 text-white p-2 rounded-r-lg shadow-lg transition-all duration-300`}
-        title={showSessions ? 'Hide chat history' : 'Show chat history'}
-      >
-        {showSessions ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-      </button>
-
-      {/* Main Chat Area */}
-      <div className="h-full flex flex-col bg-white rounded-2xl shadow-lg border border-gray-200">
+      <div className="h-[calc(100vh-120px)]">
+        {/* Main Chat Area */}
+        <div className="h-full flex flex-col bg-white rounded-2xl shadow-lg border border-gray-200">
         {/* Chat Header */}
         <div className="bg-gradient-to-r from-green-800 to-green-700 px-8 py-5 rounded-t-2xl">
           <div className="flex items-center justify-between">
