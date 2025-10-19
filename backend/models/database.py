@@ -15,6 +15,7 @@ from .user import User
 from .diet_plan import DietPlan
 from .nutrition_log import NutritionLog
 from .chat_history import ChatMessage
+from .chat_session import ChatSession
 from .meal import Meal
 
 async def init_database():
@@ -34,7 +35,7 @@ async def init_database():
         # Initialize beanie with the database and document models
         await init_beanie(
             database=client[os.getenv("MONGODB_DB_NAME", "diet_plan_ai")],
-            document_models=[User, DietPlan, NutritionLog, ChatMessage, Meal]
+            document_models=[User, DietPlan, NutritionLog, ChatMessage, ChatSession, Meal]
         )
         
         print("Database initialized successfully!")

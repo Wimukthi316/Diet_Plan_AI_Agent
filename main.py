@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from backend.models.database import init_database
 from backend.models.user import User
 from backend.models.chat_history import ChatMessage
+from backend.models.chat_session import ChatSession
 from backend.models.meal import Meal
 from backend.services.auth import AuthService
 from backend.agents.coordinator import AgentCoordinator
@@ -252,6 +253,19 @@ async def chat_with_agents(
     try:
         logger.debug(f"Processing message from user {current_user.email}")
         user_message = message.get("message", "")
+        session_id = message.get("session_id")
+        
+        # Get or create active session
+        if not session_id:
+            active_session = await ChatSession.get_active_session(str(current_user.id))
+            if not active_session:
+                active_session = await ChatSession.create_new_session(str(current_user.id))
+            session_id = str(active_session.id)
+        else:
+            active_session = await ChatSession.get(session_id)
+            if not active_session:
+                raise HTTPException(status_code=404, detail="Session not found")
+            await active_session.set_active()
         
         response = await agent_coordinator.process_user_request(
             user_id=str(current_user.id),
@@ -267,6 +281,7 @@ async def chat_with_agents(
             
             await ChatMessage.save_chat_interaction(
                 user_id=str(current_user.id),
+                session_id=session_id,
                 message=user_message,
                 response=response_text,
                 agent_name=agent_name,
@@ -275,6 +290,16 @@ async def chat_with_agents(
                     "type": response.get("type", "chat")
                 }
             )
+            
+            # Update session
+            await active_session.increment_message_count()
+            
+            # Auto-generate title from first message if still default
+            if active_session.message_count == 1 and active_session.title == "New Chat":
+                await active_session.update_title_from_message(user_message)
+        
+        # Include session_id in response
+        response["session_id"] = session_id
         
         return response
     except Exception as e:
@@ -315,6 +340,166 @@ async def clear_chat_history(current_user: User = Depends(get_current_user)):
         return {"message": "Chat history cleared successfully"}
     except Exception as e:
         logger.error(f"Error clearing chat history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# =====================================================
+# CHAT SESSION ENDPOINTS (ChatGPT-style sessions)
+# =====================================================
+
+@app.get("/chat/sessions")
+async def get_chat_sessions(current_user: User = Depends(get_current_user)):
+    """Get all chat sessions for the user"""
+    try:
+        sessions = await ChatSession.get_user_sessions(str(current_user.id))
+        return {
+            "sessions": [
+                {
+                    "id": str(session.id),
+                    "title": session.title,
+                    "message_count": session.message_count,
+                    "created_at": session.created_at.isoformat(),
+                    "updated_at": session.updated_at.isoformat(),
+                    "is_active": session.is_active
+                }
+                for session in sessions
+            ],
+            "total": len(sessions)
+        }
+    except Exception as e:
+        logger.error(f"Error getting chat sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat/sessions")
+async def create_chat_session(
+    session_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new chat session"""
+    try:
+        title = session_data.get("title", "New Chat")
+        session = await ChatSession.create_new_session(str(current_user.id), title)
+        return {
+            "id": str(session.id),
+            "title": session.title,
+            "message_count": session.message_count,
+            "created_at": session.created_at.isoformat(),
+            "updated_at": session.updated_at.isoformat(),
+            "is_active": session.is_active
+        }
+    except Exception as e:
+        logger.error(f"Error creating chat session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/sessions/{session_id}/messages")
+async def get_session_messages(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all messages for a specific session"""
+    try:
+        # Verify session belongs to user
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        messages = await ChatMessage.get_session_messages(session_id)
+        return {
+            "messages": [
+                {
+                    "id": str(msg.id),
+                    "message": msg.message,
+                    "response": msg.response,
+                    "agent": msg.agent_name,
+                    "timestamp": msg.timestamp.isoformat(),
+                    "type": msg.message_type
+                }
+                for msg in messages
+            ],
+            "session": {
+                "id": str(session.id),
+                "title": session.title,
+                "message_count": session.message_count
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting session messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/chat/sessions/{session_id}/activate")
+async def activate_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Make a session active"""
+    try:
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        await session.set_active()
+        return {
+            "message": "Session activated",
+            "session_id": str(session.id)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error activating session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/chat/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a chat session and all its messages"""
+    try:
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Delete all messages in this session
+        await ChatMessage.find(ChatMessage.session_id == session_id).delete()
+        
+        # Delete the session
+        await session.delete()
+        
+        return {"message": "Session deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/chat/sessions/{session_id}/title")
+async def update_session_title(
+    session_id: str,
+    title_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update session title"""
+    try:
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        new_title = title_data.get("title", "").strip()
+        if not new_title:
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        
+        session.title = new_title
+        await session.save()
+        
+        return {
+            "message": "Title updated",
+            "title": session.title
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating session title: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/user/profile")

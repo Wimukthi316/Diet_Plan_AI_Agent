@@ -11,6 +11,7 @@ class ChatMessage(Document):
     """Chat message model for storing conversation history"""
     
     user_id: str = Field(..., description="User ID")
+    session_id: Optional[str] = Field(default=None, description="Chat session ID")
     message: str = Field(..., description="User message")
     response: str = Field(..., description="Agent response")
     agent_name: str = Field(..., description="Name of the responding agent")
@@ -22,7 +23,9 @@ class ChatMessage(Document):
         name = "chat_messages"
         indexes = [
             "user_id",
+            "session_id",
             [("user_id", 1), ("timestamp", -1)],  # Compound index for efficient queries
+            [("session_id", 1), ("timestamp", 1)],  # For session-based queries
         ]
     
     @classmethod
@@ -33,10 +36,18 @@ class ChatMessage(Document):
         ).sort(-cls.timestamp).limit(limit).to_list()
     
     @classmethod
-    async def save_chat_interaction(cls, user_id: str, message: str, response: str, agent_name: str, metadata: Dict[str, Any] = None):
+    async def get_session_messages(cls, session_id: str):
+        """Get all messages for a specific session"""
+        return await cls.find(
+            cls.session_id == session_id
+        ).sort(cls.timestamp).to_list()
+    
+    @classmethod
+    async def save_chat_interaction(cls, user_id: str, message: str, response: str, agent_name: str, session_id: str = None, metadata: Dict[str, Any] = None):
         """Save a chat interaction"""
         chat_message = cls(
             user_id=user_id,
+            session_id=session_id,
             message=message,
             response=response,
             agent_name=agent_name,
