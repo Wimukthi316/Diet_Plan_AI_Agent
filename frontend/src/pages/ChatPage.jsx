@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader, Trash2, MessageCircle, Plus, Edit2, Check, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import Layout from '../components/Layout';
 
 const ChatPage = () => {
   const [sessions, setSessions] = useState([]);
@@ -295,7 +296,13 @@ const ChatPage = () => {
   ];
 
   return (
-    <div className="relative h-[calc(100vh-120px)]">
+    <Layout 
+      sessions={sessions} 
+      activeSessionId={activeSession?.id}
+      onSessionClick={handleSessionClick}
+      onNewSession={createNewSession}
+    >
+      <div className="relative h-[calc(100vh-120px)]">
       {/* Collapsible Sessions Sidebar */}
       <div 
         className={`fixed top-[80px] left-[288px] bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ease-in-out z-20 ${
@@ -584,6 +591,7 @@ const ChatPage = () => {
         </div>
       </div>
     </div>
+    </Layout>
   );
 };
 
