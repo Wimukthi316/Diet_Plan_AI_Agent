@@ -10,12 +10,13 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import FaviconIcon from './FaviconIcon';
 
-const Layout = ({ children, sessions, activeSessionId, onSessionClick, onNewSession }) => {
+const Layout = ({ children, sessions, activeSessionId, onSessionClick, onNewSession, onDeleteSession }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showChatHistory, setShowChatHistory] = useState(false);
   const { user, logout } = useAuth();
@@ -86,23 +87,42 @@ const Layout = ({ children, sessions, activeSessionId, onSessionClick, onNewSess
                   {isChatPage && isActive && sessions && sessions.length > 0 && (
                     <div className="mt-2 ml-4 pl-6 border-l-2 border-green-300 space-y-1 max-h-60 overflow-y-auto">
                       {sessions.slice(0, 6).map((session) => (
-                        <button
+                        <div
                           key={session.id}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onSessionClick?.(session.id);
-                            setSidebarOpen(false);
-                          }}
                           className={clsx(
-                            'w-full text-left px-3 py-2 rounded text-sm transition-colors',
+                            'relative group rounded text-sm transition-colors',
                             activeSessionId === session.id
-                              ? 'bg-green-100 text-green-800 font-medium'
+                              ? 'bg-green-100 text-green-800'
                               : 'text-gray-600 hover:bg-gray-100'
                           )}
                         >
-                          <div className="truncate">{session.title}</div>
-                          <div className="text-xs text-gray-500">{session.message_count} msgs</div>
-                        </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onSessionClick?.(session.id);
+                              setSidebarOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-2"
+                          >
+                            <div className="truncate font-medium">{session.title}</div>
+                            <div className="text-xs text-gray-500">{session.message_count} msgs</div>
+                          </button>
+                          {/* Delete button */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (window.confirm('Delete this chat?')) {
+                                onDeleteSession?.(session.id);
+                                setSidebarOpen(false);
+                              }
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                            title="Delete chat"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-600" />
+                          </button>
+                        </div>
                       ))}
                       {sessions.length > 6 && (
                         <div className="text-xs text-gray-500 px-3 py-1">
@@ -191,27 +211,45 @@ const Layout = ({ children, sessions, activeSessionId, onSessionClick, onNewSess
                 {isChatPage && isActive && sessions && sessions.length > 0 && (
                   <div className="mt-2 ml-4 pl-6 border-l-2 border-green-300 space-y-1 max-h-80 overflow-y-auto">
                     {sessions.slice(0, 8).map((session) => (
-                      <button
+                      <div
                         key={session.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onSessionClick?.(session.id);
-                        }}
                         className={clsx(
-                          'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors group',
+                          'relative group rounded-lg text-sm transition-colors',
                           activeSessionId === session.id
-                            ? 'bg-green-100 text-green-900 font-medium'
+                            ? 'bg-green-100 text-green-900'
                             : 'text-gray-600 hover:bg-gray-50'
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <MessageCircle className="w-3 h-3 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="truncate font-medium">{session.title}</div>
-                            <div className="text-xs text-gray-500">{session.message_count} messages</div>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onSessionClick?.(session.id);
+                          }}
+                          className="w-full text-left px-3 py-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="w-3 h-3 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="truncate font-medium">{session.title}</div>
+                              <div className="text-xs text-gray-500">{session.message_count} messages</div>
+                            </div>
                           </div>
-                        </div>
-                      </button>
+                        </button>
+                        {/* Delete button - shows on hover */}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.confirm('Delete this chat?')) {
+                              onDeleteSession?.(session.id);
+                            }
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                          title="Delete chat"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-600" />
+                        </button>
+                      </div>
                     ))}
                     {sessions.length > 8 && (
                       <div className="text-xs text-gray-500 px-3 py-2 text-center italic">
