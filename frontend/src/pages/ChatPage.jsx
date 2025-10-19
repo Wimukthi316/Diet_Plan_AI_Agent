@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader, Trash2, MessageCircle, Plus, Edit2, Check, X, MessageSquare } from 'lucide-react';
+import { Send, Bot, User, Loader, Trash2, MessageCircle, Plus, Edit2, Check, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -12,6 +12,7 @@ const ChatPage = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [showSessions, setShowSessions] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -294,141 +295,156 @@ const ChatPage = () => {
   ];
 
   return (
-    <div className="flex h-[calc(100vh-50px)] bg-gray-50">
-      {/* Sessions Sidebar - ChatGPT Style */}
-      <div className="w-80 bg-gray-900 text-white flex flex-col">
-        {/* New Chat Button */}
-        <div className="p-4 border-b border-gray-700">
-          <button
-            onClick={createNewSession}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl transition-all duration-200 font-semibold"
-            style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-          >
-            <Plus className="w-5 h-5" />
-            New Chat
-          </button>
-        </div>
+    <div className="relative h-[calc(100vh-120px)]">
+      {/* Collapsible Sessions Sidebar */}
+      <div 
+        className={`fixed top-[80px] left-[288px] bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ease-in-out z-20 ${
+          showSessions ? 'w-80 translate-x-0' : 'w-0 -translate-x-full'
+        } h-[calc(100vh-80px)] overflow-hidden`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Sessions Header */}
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <button
+              onClick={createNewSession}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-800 hover:bg-green-900 text-white rounded-xl transition-all duration-200 font-semibold shadow-md"
+              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+            >
+              <Plus className="w-5 h-5" />
+              New Chat
+            </button>
+          </div>
 
-        {/* Sessions List */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {isLoadingSessions ? (
-            <div className="flex justify-center items-center h-32">
-              <Loader className="w-6 h-6 animate-spin text-gray-400" />
-            </div>
-          ) : sessions.length === 0 ? (
-            <div className="text-center text-gray-400 py-8 px-4">
-              <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">No chats yet</p>
-            </div>
-          ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => handleSessionClick(session.id)}
-                className={`group relative p-3 mb-1 rounded-lg cursor-pointer transition-all duration-200 ${
-                  activeSession?.id === session.id
-                    ? 'bg-gray-700'
-                    : 'hover:bg-gray-800'
-                }`}
-              >
-                {editingSessionId === session.id ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveSessionTitle(session.id);
-                        if (e.key === 'Escape') cancelEditingTitle();
-                      }}
-                      className="flex-1 bg-gray-600 text-white px-2 py-1 rounded text-sm"
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        saveSessionTitle(session.id);
-                      }}
-                      className="text-green-400 hover:text-green-300"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        cancelEditingTitle();
-                      }}
-                      className="text-gray-400 hover:text-gray-300"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <MessageCircle className="w-4 h-4 flex-shrink-0" />
-                          <h3
-                            className="text-sm font-medium truncate"
-                            style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                          >
-                            {session.title}
-                          </h3>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <span>{session.message_count} messages</span>
-                          <span>•</span>
-                          <span>{formatDate(session.updated_at)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => startEditingTitle(session, e)}
-                          className="p-1 hover:bg-gray-600 rounded"
-                          title="Edit title"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteSession(session.id, e)}
-                          className="p-1 hover:bg-red-600 rounded"
-                          title="Delete chat"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
+          {/* Sessions List */}
+          <div className="flex-1 overflow-y-auto p-3">
+            {isLoadingSessions ? (
+              <div className="flex justify-center items-center h-32">
+                <Loader className="w-6 h-6 animate-spin text-green-600" />
               </div>
-            ))
-          )}
-        </div>
+            ) : sessions.length === 0 ? (
+              <div className="text-center text-gray-400 py-8 px-4">
+                <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No chats yet</p>
+              </div>
+            ) : (
+              sessions.map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => handleSessionClick(session.id)}
+                  className={`group relative p-3 mb-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                    activeSession?.id === session.id
+                      ? 'bg-green-50 border-2 border-green-500'
+                      : 'hover:bg-gray-50 border-2 border-transparent'
+                  }`}
+                >
+                  {editingSessionId === session.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveSessionTitle(session.id);
+                          if (e.key === 'Escape') cancelEditingTitle();
+                        }}
+                        className="flex-1 bg-white border border-gray-300 text-gray-800 px-2 py-1 rounded text-sm"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          saveSessionTitle(session.id);
+                        }}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cancelEditingTitle();
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MessageCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                            <h3
+                              className="text-sm font-medium truncate text-gray-800"
+                              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                            >
+                              {session.title}
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{session.message_count} messages</span>
+                            <span>•</span>
+                            <span>{formatDate(session.updated_at)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => startEditingTitle(session, e)}
+                            className="p-1 hover:bg-gray-200 rounded"
+                            title="Edit title"
+                          >
+                            <Edit2 className="w-3 h-3 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteSession(session.id, e)}
+                            className="p-1 hover:bg-red-100 rounded"
+                            title="Delete chat"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
 
-        {/* User Info Footer */}
-        <div className="p-4 border-t border-gray-700">
-          <div className="text-xs text-gray-400 text-center">
-            <p className="font-semibold" style={{ fontFamily: 'Merienda, cursive' }}>
-              Nutri AI Assistant
-            </p>
-            <p className="mt-1">Powered by 3 AI Agents</p>
+          {/* Sessions Footer */}
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="text-xs text-gray-500 text-center">
+              <p className="font-semibold" style={{ fontFamily: 'Merienda, cursive' }}>
+                Chat History
+              </p>
+              <p className="mt-1">{sessions.length} conversation{sessions.length !== 1 ? 's' : ''}</p>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Toggle Sessions Button */}
+      <button
+        onClick={() => setShowSessions(!showSessions)}
+        className={`fixed top-[100px] ${showSessions ? 'left-[656px]' : 'left-[288px]'} z-30 bg-green-800 hover:bg-green-900 text-white p-2 rounded-r-lg shadow-lg transition-all duration-300`}
+        title={showSessions ? 'Hide chat history' : 'Show chat history'}
+      >
+        {showSessions ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+      </button>
+
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="h-full flex flex-col bg-white rounded-2xl shadow-lg border border-gray-200">
         {/* Chat Header */}
-        <div className="bg-green-800 px-8 py-4 border-b border-gray-200">
+        <div className="bg-gradient-to-r from-green-800 to-green-700 px-8 py-5 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                <Bot className="w-6 h-6 text-green-800" />
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
+                <Bot className="w-7 h-7 text-green-800" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white" style={{ fontFamily: 'Merienda, cursive' }}>
+                <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Merienda, cursive' }}>
                   {activeSession?.title || 'New Chat'}
                 </h2>
                 {activeSession && (
@@ -542,7 +558,7 @@ const ChatPage = () => {
         )}
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 p-6 bg-white">
+        <div className="border-t border-gray-200 p-6 bg-white rounded-b-2xl">
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSendMessage} className="flex gap-3">
               <input

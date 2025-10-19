@@ -12,7 +12,7 @@ import {
 import { clsx } from 'clsx';
 import FaviconIcon from './FaviconIcon';
 
-const Layout = ({ children }) => {
+const Layout = ({ children, showSessionsSidebar, onToggleSessions, sessions, activeSessionId, onSessionClick, onDeleteSession, onEditSession }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -21,7 +21,6 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'AI Chat', href: '/chat', icon: MessageCircle },
-    { name: 'Profile', href: '/profile', icon: User },
   ];
 
   const handleLogout = () => {
@@ -74,6 +73,13 @@ const Layout = ({ children }) => {
             })}
           </nav>
           <div className="border-t border-gray-100 p-6">
+            <Link
+              to="/profile"
+              className="flex items-center space-x-3 w-full px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-lg mb-3"
+            >
+              <User className="w-5 h-5" />
+              <span>{user?.name || 'Profile'}</span>
+            </Link>
             <button
               onClick={handleLogout}
               className="flex items-center space-x-3 w-full px-4 py-3 text-base font-medium text-red-600 bg-red-50 rounded-lg"
@@ -116,6 +122,13 @@ const Layout = ({ children }) => {
           })}
         </nav>
         <div className="border-t border-gray-100 p-6">
+          <Link
+            to="/profile"
+            className="flex items-center space-x-3 w-full px-4 py-4 text-base font-semibold text-gray-700 hover:bg-gray-100 rounded-lg mb-3"
+          >
+            <User className="w-6 h-6" />
+            <span>{user?.name || 'Profile'}</span>
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center space-x-3 w-full px-4 py-4 text-base font-semibold text-red-600 bg-red-50 rounded-lg"
