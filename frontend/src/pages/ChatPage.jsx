@@ -143,6 +143,26 @@ const ChatPage = () => {
     }
   };
 
+  const handleRenameSession = async (sessionId, newTitle) => {
+    try {
+      await chatAPI.updateSessionTitle(sessionId, newTitle);
+      const updatedSessions = sessions.map(s => 
+        s.id === sessionId ? { ...s, title: newTitle } : s
+      );
+      setSessions(updatedSessions);
+      
+      // Update active session if it's the one being renamed
+      if (activeSession?.id === sessionId) {
+        setActiveSession({ ...activeSession, title: newTitle });
+      }
+      
+      toast.success('Chat renamed');
+    } catch (error) {
+      console.error('Error renaming session:', error);
+      toast.error('Failed to rename chat');
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || isLoading) return;
@@ -252,6 +272,7 @@ const ChatPage = () => {
       onSessionClick={handleSessionClick}
       onNewSession={createNewSession}
       onDeleteSession={handleDeleteSession}
+      onRenameSession={handleRenameSession}
     >
       <div className="h-[calc(100vh-120px)]">
         {/* Main Chat Area */}
