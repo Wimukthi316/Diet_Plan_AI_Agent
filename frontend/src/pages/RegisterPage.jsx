@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import {
   Eye,
@@ -18,26 +19,6 @@ import {
 } from "lucide-react"
 import LoadingSpinner from "../components/LoadingSpinner"
 import FaviconIcon from "../components/FaviconIcon"
-
-// Mock Link and useNavigate for demo purposes
-const Link = ({ to, children, className }) => (
-  <a
-    href="#"
-    className={className}
-    onClick={(e) => {
-      e.preventDefault()
-      console.log(`Navigate to: ${to}`)
-    }}
-  >
-    {children}
-  </a>
-)
-
-const useNavigate = () => {
-  return (path) => {
-    console.log(`Navigate to: ${path}`)
-  }
-}
 
 const RegisterPage = () => {
   const [currentStep, setCurrentStep] = useState(1)
@@ -205,9 +186,14 @@ const RegisterPage = () => {
       },
     }
 
-    const success = await register(userData)
-    if (success) {
-      navigate("/login")
+    try {
+      const success = await register(userData)
+      if (success) {
+        // Navigate to login page after successful registration
+        navigate("/login")
+      }
+    } catch (error) {
+      console.error("Registration error:", error)
     }
   }
 

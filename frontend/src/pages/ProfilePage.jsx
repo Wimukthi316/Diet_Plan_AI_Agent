@@ -1,8 +1,9 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { User, Settings, Bell, Shield, Edit3, Camera, Save, X, LogOut } from "lucide-react"
+import { User, Settings, Bell, Shield, Edit3, Camera, Save, X, LogOut, Plus, Trash2, Utensils } from "lucide-react"
 import toast from 'react-hot-toast'
+import api from '../services/api'
 
 const ProfilePage = () => {
   const { user, updateProfile, logout } = useAuth()
@@ -17,6 +18,23 @@ const ProfilePage = () => {
     health_goals: []
   })
 
+  // Meal tracking state
+  const [showMealForm, setShowMealForm] = useState(false)
+  const [mealData, setMealData] = useState({
+    meal_name: '',
+    meal_type: 'breakfast',
+    calories: '',
+    protein: '',
+    carbs: '',
+    fats: '',
+    fiber: '',
+    serving_size: '',
+    notes: ''
+  })
+  const [todaysMeals, setTodaysMeals] = useState([])
+  const [aiAnalysis, setAiAnalysis] = useState(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+
   // Load profile data when component mounts or user changes
   useEffect(() => {
     if (user?.profile) {
@@ -30,7 +48,91 @@ const ProfilePage = () => {
         health_goals: user.profile.health_goals || []
       })
     }
+    // Load today's meals
+    fetchTodaysMeals()
   }, [user])
+
+  const fetchTodaysMeals = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const response = await api.get(`/nutrition/meals?date=${today}`)
+      setTodaysMeals(response.data || [])
+    } catch (error) {
+      console.error('Error fetching meals:', error)
+    }
+  }
+
+  const handleMealInputChange = (e) => {
+    const { name, value } = e.target
+    setMealData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleAddMeal = async (e) => {
+    e.preventDefault()
+    try {
+      const submitData = {
+        ...mealData,
+        calories: mealData.calories ? parseFloat(mealData.calories) : 0,
+        protein: mealData.protein ? parseFloat(mealData.protein) : 0,
+        carbs: mealData.carbs ? parseFloat(mealData.carbs) : 0,
+        fats: mealData.fats ? parseFloat(mealData.fats) : 0,
+        fiber: mealData.fiber ? parseFloat(mealData.fiber) : 0,
+        date: new Date().toISOString().split('T')[0]
+      }
+
+      await api.post('/nutrition/meals', submitData)
+      toast.success('Meal added successfully!')
+      
+      // Reset form
+      setMealData({
+        meal_name: '',
+        meal_type: 'breakfast',
+        calories: '',
+        protein: '',
+        carbs: '',
+        fats: '',
+        fiber: '',
+        serving_size: '',
+        notes: ''
+      })
+      setShowMealForm(false)
+      
+      // Refresh meals list
+      fetchTodaysMeals()
+    } catch (error) {
+      toast.error('Failed to add meal')
+      console.error('Error adding meal:', error)
+    }
+  }
+
+  const handleDeleteMeal = async (mealId) => {
+    try {
+      await api.delete(`/nutrition/meals/${mealId}`)
+      toast.success('Meal deleted successfully!')
+      fetchTodaysMeals()
+    } catch (error) {
+      toast.error('Failed to delete meal')
+      console.error('Error deleting meal:', error)
+    }
+  }
+
+  const handleAnalyzeIntake = async () => {
+    try {
+      setIsAnalyzing(true)
+      const today = new Date().toISOString().split('T')[0]
+      const response = await api.post('/nutrition/analyze-and-suggest', { date: today })
+      setAiAnalysis(response.data)
+      toast.success('AI analysis complete!')
+    } catch (error) {
+      toast.error('Failed to analyze intake')
+      console.error('Error analyzing intake:', error)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -430,6 +532,390 @@ const ProfilePage = () => {
 
 
               </>
+            )}
+          </div>
+        </div>
+
+        {/* Daily Meal Tracking Section */}
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-green-800 to-emerald-700 px-8 py-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Merienda, cursive' }}>
+                  Daily Food Intake
+                </h2>
+                <p className="text-green-100 text-lg" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                  Track your meals and nutritional information
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMealForm(!showMealForm)}
+                className="flex items-center gap-3 px-6 py-3 bg-white text-green-800 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
+                style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+              >
+                {showMealForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                {showMealForm ? 'Cancel' : 'Add Meal'}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-8">
+            {/* Add Meal Form */}
+            {showMealForm && (
+              <form onSubmit={handleAddMeal} className="mb-8 bg-gray-50 rounded-2xl p-6 border-2 border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-6" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                  Add New Meal
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Meal Name */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Meal Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="meal_name"
+                      value={mealData.meal_name}
+                      onChange={handleMealInputChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="e.g., Grilled Chicken Salad"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+
+                  {/* Meal Type */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Meal Type *
+                    </label>
+                    <select
+                      name="meal_type"
+                      value={mealData.meal_type}
+                      onChange={handleMealInputChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    >
+                      <option value="breakfast">Breakfast</option>
+                      <option value="lunch">Lunch</option>
+                      <option value="dinner">Dinner</option>
+                      <option value="snack">Snack</option>
+                    </select>
+                  </div>
+
+                  {/* Serving Size */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Serving Size
+                    </label>
+                    <input
+                      type="text"
+                      name="serving_size"
+                      value={mealData.serving_size}
+                      onChange={handleMealInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="e.g., 1 cup, 200g"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+
+                  {/* Nutritional Information */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Calories (kcal) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="calories"
+                      value={mealData.calories}
+                      onChange={handleMealInputChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="e.g., 350"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Protein (g) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="protein"
+                      value={mealData.protein}
+                      onChange={handleMealInputChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="e.g., 25"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Carbohydrates (g) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="carbs"
+                      value={mealData.carbs}
+                      onChange={handleMealInputChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="e.g., 40"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Fats (g) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="fats"
+                      value={mealData.fats}
+                      onChange={handleMealInputChange}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="e.g., 15"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Fiber (g)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="fiber"
+                      value={mealData.fiber}
+                      onChange={handleMealInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="e.g., 5"
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+
+                  {/* Notes */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Notes (Optional)
+                    </label>
+                    <textarea
+                      name="notes"
+                      value={mealData.notes}
+                      onChange={handleMealInputChange}
+                      rows={3}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-white font-medium"
+                      placeholder="Any additional information about this meal..."
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 mt-6">
+                  <button
+                    type="submit"
+                    className="flex items-center gap-3 px-6 py-3 bg-green-800 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                  >
+                    <Save className="w-5 h-5" />
+                    Save Meal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMealForm(false)}
+                    className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Today's Meals List */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                  Today's Meals ({todaysMeals.length})
+                </h3>
+                {todaysMeals.length > 0 && (
+                  <button
+                    onClick={handleAnalyzeIntake}
+                    disabled={isAnalyzing}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        🤖 AI Analyze & Suggest
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {todaysMeals.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                  <Utensils className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg font-medium" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                    No meals logged yet today
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                    Click "Add Meal" to start tracking your food intake
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {todaysMeals.map((meal) => (
+                    <div key={meal.id || meal._id} className="bg-gray-50 rounded-2xl p-6 border border-gray-200 hover:border-green-300 transition-all">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold uppercase" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              {meal.meal_type}
+                            </span>
+                            <h4 className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              {meal.meal_name}
+                            </h4>
+                          </div>
+                          {meal.serving_size && (
+                            <p className="text-sm text-gray-600" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              Serving: {meal.serving_size}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteMeal(meal.id || meal._id)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="bg-white rounded-xl p-3 border border-gray-200">
+                          <p className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Calories</p>
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                            {meal.calories} <span className="text-xs font-normal">kcal</span>
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-200">
+                          <p className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Protein</p>
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                            {meal.protein} <span className="text-xs font-normal">g</span>
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-200">
+                          <p className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Carbs</p>
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                            {meal.carbs} <span className="text-xs font-normal">g</span>
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-200">
+                          <p className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Fats</p>
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                            {meal.fats} <span className="text-xs font-normal">g</span>
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-200">
+                          <p className="text-xs text-gray-600 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Fiber</p>
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                            {meal.fiber || 0} <span className="text-xs font-normal">g</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {meal.notes && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <p className="text-sm text-gray-600" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                            <span className="font-semibold">Notes:</span> {meal.notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* AI Analysis & Suggestions */}
+            {aiAnalysis && aiAnalysis.response && (
+              <div className="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl font-bold text-blue-900" style={{ fontFamily: 'Merienda, cursive' }}>
+                    🤖 AI Diet Analysis & Suggestions
+                  </h3>
+                  <button
+                    onClick={() => setAiAnalysis(null)}
+                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div className="prose prose-sm max-w-none">
+                    <div className="whitespace-pre-wrap text-gray-800" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      {aiAnalysis.response}
+                    </div>
+                  </div>
+                  
+                  {aiAnalysis.analysis_data && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <h4 className="font-bold text-gray-900 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                        📊 Progress Summary
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {Object.entries(aiAnalysis.analysis_data.progress || {}).map(([nutrient, percentage]) => (
+                          <div key={nutrient} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-600 mb-1 capitalize" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              {nutrient}
+                            </p>
+                            <div className="flex items-baseline gap-1">
+                              <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                                {percentage}%
+                              </p>
+                              <p className="text-xs text-gray-500">of goal</p>
+                            </div>
+                            <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  percentage >= 90 && percentage <= 110
+                                    ? 'bg-green-500'
+                                    : percentage < 90
+                                    ? 'bg-yellow-500'
+                                    : 'bg-orange-500'
+                                }`}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

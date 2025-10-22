@@ -50,11 +50,25 @@ export const AuthProvider = ({ children }) => {
       
       await fetchUserProfile();
       toast.success('Welcome back!');
-      return true;
+      return { success: true };
     } catch (error) {
-      const message = error.response?.data?.detail || 'Login failed';
-      toast.error(message);
-      return false;
+      let message = 'Login failed. Please try again.';
+      
+      if (error.response?.data?.detail) {
+        message = error.response.data.detail;
+      } else if (error.message === 'Network Error') {
+        message = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else if (error.code === 'ECONNREFUSED') {
+        message = 'Server is not available. Please try again later.';
+      }
+      
+      // Don't show toast for login errors - let the form handle it
+      // toast.error(message);
+      return { 
+        success: false, 
+        error: message,
+        status: error.response?.status
+      };
     } finally {
       setLoading(false);
     }

@@ -16,8 +16,11 @@ from dotenv import load_dotenv
 from backend.models.database import init_database
 from backend.models.user import User
 from backend.models.chat_history import ChatMessage
+from backend.models.chat_session import ChatSession
+from backend.models.meal import Meal
 from backend.services.auth import AuthService
 from backend.agents.coordinator import AgentCoordinator
+from backend.agents.diet_tracker import DietTrackerAgent
 from backend.utils.security import verify_token
 
 # Load environment variables
@@ -68,6 +71,7 @@ app.add_middleware(
 # Initialize services
 auth_service = AuthService()
 agent_coordinator = AgentCoordinator()
+diet_tracker_agent = DietTrackerAgent()
 
 # Dependency for authentication
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -149,16 +153,29 @@ async def login(credentials: dict):
     """User login endpoint"""
     try:
         # Validate required fields
-        if not credentials.get("email") or not credentials.get("password"):
+        email = credentials.get("email", "").strip()
+        password = credentials.get("password", "")
+        
+        if not email:
             raise HTTPException(
                 status_code=400, 
-                detail="Email and password are required"
+                detail="Please enter your email address"
             )
         
-        token = await auth_service.authenticate_user(
-            credentials.get("email"), 
-            credentials.get("password")
-        )
+        if not password:
+            raise HTTPException(
+                status_code=400, 
+                detail="Please enter your password"
+            )
+            
+        # Basic email format validation
+        if "@" not in email:
+            raise HTTPException(
+                status_code=400, 
+                detail="Please enter a valid email address"
+            )
+        
+        token = await auth_service.authenticate_user(email, password)
         return {
             "access_token": token, 
             "token_type": "bearer",
@@ -168,7 +185,7 @@ async def login(credentials: dict):
         raise HTTPException(status_code=401, detail=str(e))
     except Exception as e:
         logger.error(f"Login error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error during login")
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again or contact support if the problem persists.")
 
 def format_response_for_history(response_data: dict) -> str:
     """Format the multi-agent response for chat history storage"""
@@ -236,6 +253,19 @@ async def chat_with_agents(
     try:
         logger.debug(f"Processing message from user {current_user.email}")
         user_message = message.get("message", "")
+        session_id = message.get("session_id")
+        
+        # Get or create active session
+        if not session_id:
+            active_session = await ChatSession.get_active_session(str(current_user.id))
+            if not active_session:
+                active_session = await ChatSession.create_new_session(str(current_user.id))
+            session_id = str(active_session.id)
+        else:
+            active_session = await ChatSession.get(session_id)
+            if not active_session:
+                raise HTTPException(status_code=404, detail="Session not found")
+            await active_session.set_active()
         
         response = await agent_coordinator.process_user_request(
             user_id=str(current_user.id),
@@ -251,6 +281,7 @@ async def chat_with_agents(
             
             await ChatMessage.save_chat_interaction(
                 user_id=str(current_user.id),
+                session_id=session_id,
                 message=user_message,
                 response=response_text,
                 agent_name=agent_name,
@@ -259,6 +290,16 @@ async def chat_with_agents(
                     "type": response.get("type", "chat")
                 }
             )
+            
+            # Update session
+            await active_session.increment_message_count()
+            
+            # Auto-generate title from first message if still default
+            if active_session.message_count == 1 and active_session.title == "New Chat":
+                await active_session.update_title_from_message(user_message)
+        
+        # Include session_id in response
+        response["session_id"] = session_id
         
         return response
     except Exception as e:
@@ -299,6 +340,166 @@ async def clear_chat_history(current_user: User = Depends(get_current_user)):
         return {"message": "Chat history cleared successfully"}
     except Exception as e:
         logger.error(f"Error clearing chat history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# =====================================================
+# CHAT SESSION ENDPOINTS (ChatGPT-style sessions)
+# =====================================================
+
+@app.get("/chat/sessions")
+async def get_chat_sessions(current_user: User = Depends(get_current_user)):
+    """Get all chat sessions for the user"""
+    try:
+        sessions = await ChatSession.get_user_sessions(str(current_user.id))
+        return {
+            "sessions": [
+                {
+                    "id": str(session.id),
+                    "title": session.title,
+                    "message_count": session.message_count,
+                    "created_at": session.created_at.isoformat(),
+                    "updated_at": session.updated_at.isoformat(),
+                    "is_active": session.is_active
+                }
+                for session in sessions
+            ],
+            "total": len(sessions)
+        }
+    except Exception as e:
+        logger.error(f"Error getting chat sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat/sessions")
+async def create_chat_session(
+    session_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new chat session"""
+    try:
+        title = session_data.get("title", "New Chat")
+        session = await ChatSession.create_new_session(str(current_user.id), title)
+        return {
+            "id": str(session.id),
+            "title": session.title,
+            "message_count": session.message_count,
+            "created_at": session.created_at.isoformat(),
+            "updated_at": session.updated_at.isoformat(),
+            "is_active": session.is_active
+        }
+    except Exception as e:
+        logger.error(f"Error creating chat session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/sessions/{session_id}/messages")
+async def get_session_messages(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all messages for a specific session"""
+    try:
+        # Verify session belongs to user
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        messages = await ChatMessage.get_session_messages(session_id)
+        return {
+            "messages": [
+                {
+                    "id": str(msg.id),
+                    "message": msg.message,
+                    "response": msg.response,
+                    "agent": msg.agent_name,
+                    "timestamp": msg.timestamp.isoformat(),
+                    "type": msg.message_type
+                }
+                for msg in messages
+            ],
+            "session": {
+                "id": str(session.id),
+                "title": session.title,
+                "message_count": session.message_count
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting session messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/chat/sessions/{session_id}/activate")
+async def activate_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Make a session active"""
+    try:
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        await session.set_active()
+        return {
+            "message": "Session activated",
+            "session_id": str(session.id)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error activating session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/chat/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a chat session and all its messages"""
+    try:
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Delete all messages in this session
+        await ChatMessage.find(ChatMessage.session_id == session_id).delete()
+        
+        # Delete the session
+        await session.delete()
+        
+        return {"message": "Session deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/chat/sessions/{session_id}/title")
+async def update_session_title(
+    session_id: str,
+    title_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update session title"""
+    try:
+        session = await ChatSession.get(session_id)
+        if not session or session.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        new_title = title_data.get("title", "").strip()
+        if not new_title:
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        
+        session.title = new_title
+        await session.save()
+        
+        return {
+            "message": "Title updated",
+            "title": session.title
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating session title: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/user/profile")
@@ -367,6 +568,167 @@ async def update_user_profile(
     except Exception as e:
         logger.error(f"Error updating profile: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+# =====================================================
+# MEAL TRACKING ENDPOINTS
+# =====================================================
+
+@app.post("/nutrition/meals")
+async def add_meal(meal_data: dict, current_user: User = Depends(get_current_user)):
+    """Add a new meal entry"""
+    try:
+        # Create meal document
+        meal = Meal(
+            user_id=current_user.id,
+            meal_name=meal_data.get("meal_name"),
+            meal_type=meal_data.get("meal_type", "snack"),
+            calories=float(meal_data.get("calories", 0)),
+            protein=float(meal_data.get("protein", 0)),
+            carbs=float(meal_data.get("carbs", 0)),
+            fats=float(meal_data.get("fats", 0)),
+            fiber=float(meal_data.get("fiber", 0)),
+            serving_size=meal_data.get("serving_size"),
+            notes=meal_data.get("notes"),
+            date=meal_data.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
+        )
+        
+        await meal.insert()
+        
+        return {
+            "message": "Meal added successfully",
+            "meal": {
+                "id": str(meal.id),
+                "meal_name": meal.meal_name,
+                "meal_type": meal.meal_type,
+                "calories": meal.calories,
+                "protein": meal.protein,
+                "carbs": meal.carbs,
+                "fats": meal.fats,
+                "fiber": meal.fiber,
+                "serving_size": meal.serving_size,
+                "notes": meal.notes,
+                "date": meal.date
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error adding meal: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to add meal: {str(e)}")
+
+@app.get("/nutrition/meals")
+async def get_meals(date: str = None, current_user: User = Depends(get_current_user)):
+    """Get meals for a specific date or all meals"""
+    try:
+        query = {"user_id": current_user.id}
+        
+        if date:
+            query["date"] = date
+        
+        meals = await Meal.find(query).sort("-created_at").to_list()
+        
+        return [
+            {
+                "id": str(meal.id),
+                "_id": str(meal.id),
+                "meal_name": meal.meal_name,
+                "meal_type": meal.meal_type,
+                "calories": meal.calories,
+                "protein": meal.protein,
+                "carbs": meal.carbs,
+                "fats": meal.fats,
+                "fiber": meal.fiber,
+                "serving_size": meal.serving_size,
+                "notes": meal.notes,
+                "date": meal.date,
+                "created_at": meal.created_at.isoformat()
+            }
+            for meal in meals
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching meals: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch meals: {str(e)}")
+
+@app.delete("/nutrition/meals/{meal_id}")
+async def delete_meal(meal_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a meal entry"""
+    try:
+        from bson import ObjectId
+        
+        meal = await Meal.get(ObjectId(meal_id))
+        
+        if not meal:
+            raise HTTPException(status_code=404, detail="Meal not found")
+        
+        # Verify the meal belongs to the current user
+        if meal.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this meal")
+        
+        await meal.delete()
+        
+        return {"message": "Meal deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting meal: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete meal: {str(e)}")
+
+@app.get("/nutrition/meals/summary/{date}")
+async def get_daily_summary(date: str, current_user: User = Depends(get_current_user)):
+    """Get nutritional summary for a specific date"""
+    try:
+        meals = await Meal.find({"user_id": current_user.id, "date": date}).to_list()
+        
+        if not meals:
+            return {
+                "date": date,
+                "total_calories": 0,
+                "total_protein": 0,
+                "total_carbs": 0,
+                "total_fats": 0,
+                "total_fiber": 0,
+                "meal_count": 0
+            }
+        
+        summary = {
+            "date": date,
+            "total_calories": sum(meal.calories for meal in meals),
+            "total_protein": sum(meal.protein for meal in meals),
+            "total_carbs": sum(meal.carbs for meal in meals),
+            "total_fats": sum(meal.fats for meal in meals),
+            "total_fiber": sum(meal.fiber for meal in meals),
+            "meal_count": len(meals)
+        }
+        
+        return summary
+    except Exception as e:
+        logger.error(f"Error getting daily summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get summary: {str(e)}")
+
+@app.post("/nutrition/analyze-and-suggest")
+async def analyze_and_suggest_meals(
+    request_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Analyze user's daily food intake against their health goals and provide suggestions.
+    This endpoint uses AI to evaluate eating patterns and recommend improvements.
+    """
+    try:
+        date = request_data.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
+        
+        # Use the diet tracker agent to analyze intake and suggest meals
+        analysis = await diet_tracker_agent.analyze_daily_intake_and_suggest(
+            user_id=str(current_user.id),
+            date=date
+        )
+        
+        return analysis
+        
+    except Exception as e:
+        logger.error(f"Error analyzing daily intake: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze daily intake: {str(e)}"
+        )
 
 if __name__ == "__main__":
     uvicorn.run(

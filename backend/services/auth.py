@@ -87,14 +87,14 @@ class AuthService:
         # Find user
         user = await User.find_one(User.email == email)
         if not user:
-            raise ValueError("Invalid email or password")
+            raise ValueError("No account found with this email address. Please check your email or sign up for a new account.")
         
         # Verify password
         if not self.verify_password(password, user.password_hash):
-            raise ValueError("Invalid email or password")
+            raise ValueError("Incorrect password. Please check your password and try again.")
         
         if not user.is_active:
-            raise ValueError("Account is deactivated")
+            raise ValueError("Your account has been deactivated. Please contact support for assistance.")
         
         # Create access token
         access_token = self.create_access_token(data={"sub": str(user.id)})
