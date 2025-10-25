@@ -51,9 +51,7 @@ function App() {
             path="/chat"
             element={
               isAuthenticated ? (
-                <Layout>
-                  <ChatPage />
-                </Layout>
+                <ChatPage />
               ) : (
                 <Navigate to="/login" />
               )

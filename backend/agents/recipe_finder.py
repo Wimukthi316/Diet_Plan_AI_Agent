@@ -1,24 +1,29 @@
 """
 Recipe Finder Agent - Using Spoonacular API for comprehensive recipe data
+This file contains the RecipeFinderAgent class which searches recipes using the
+Spoonacular API and provides formatted responses. Below each line or logical
+block has an inline comment explaining what it does.
 """
-import os
-import requests
-from typing import Dict, Any, List, Optional
-from backend.agents.base_agent import BaseAgent
-from backend.models.user import User
-from backend.utils.security import sanitize_input
-import re
+import os # used for reading environment variables (API key)
+import requests # synchronous HTTP client used to call Spoonacular endpoints
+from typing import Dict, Any, List, Optional # typing hints for readability and static analysis
+from backend.agents.base_agent import BaseAgent # base class provided by the project
+from backend.models.user import User # ORM / model to fetch user profile data
+from backend.utils.security import sanitize_input # helper to sanitize user-provided input
+import re # regex utilities used for parsing user messages
 
 class RecipeFinderAgent(BaseAgent):
     """Agent specialized in finding recipes using Spoonacular API"""
     
+    # The class inherits from BaseAgent to reuse common agent behavior (logging, model calls, etc.)
     def __init__(self):
         super().__init__(
             name="RecipeFinder",
             role="Recipe discovery, meal planning, and culinary guidance specialist",
             model_name="gemini-2.0-flash"
         )
-        
+
+        # List of capabilities this agent advertises
         self.capabilities = [
             "Recipe search via Spoonacular API",
             "Dietary preference filtering",
@@ -30,26 +35,37 @@ class RecipeFinderAgent(BaseAgent):
         ]
         
         # Spoonacular API configuration
-        self.spoonacular_api_key = os.getenv("SPOONACULAR_API_KEY")
-        self.base_url = "https://api.spoonacular.com/recipes"
+        self.spoonacular_api_key = os.getenv("SPOONACULAR_API_KEY") # read API key from environment (keep secret)
+        self.base_url = "https://api.spoonacular.com/recipes" # base endpoint for Spoonacular API
         
     async def process_request(self, request: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Process recipe-related requests"""
+        """Process recipe-related requests
+        This is the main entrypoint for incoming requests to the agent. It:
+        - sanitizes input,
+        - attempts to extract a recipe query,
+        - queries Spoonacular if appropriate, and
+        - falls back to AI-generated guidance for general questions.
+        """
         try:
+            # Sanitize the incoming message text to prevent injection attacks
             message = sanitize_input(request.get("message", ""))
+            # Determine request type, default to 'general' if not provided
             request_type = request.get("type", "general")
             
+            # If the message is empty, provide a general recipe help response
             if not message:
                 return await self._general_recipe_response("", context)
             
-            # Extract recipe query from message
+            # Extract recipe query from message (e.g., "chicken curry" or "recipes with potatoes")
             recipe_query = self._extract_recipe_query(message)
             
+            # If we found a query and the request is not explicitly 'general', call the Spoonacular API
             if recipe_query and request_type != "general":
-                # Get recipes from Spoonacular API
+                # Calls an async wrapper that actually uses synchronous requests (note: blocking)
                 recipes = await self._search_spoonacular_recipes(recipe_query, context)
                 
                 if recipes:
+                    # Format a human-friendly response and return structured payload
                     response = self._format_recipe_response(recipes, recipe_query)
                     return {
                         "agent": self.name,
@@ -63,14 +79,20 @@ class RecipeFinderAgent(BaseAgent):
             return await self._general_recipe_response(message, context)
                 
         except Exception as e:
+            # Log unexpected errors and return a helpful general response
             self.logger.error(f"Error in recipe finder: {e}")
             return await self._general_recipe_response(message, context)
     
     def _extract_recipe_query(self, message: str) -> Optional[str]:
-        """Extract recipe search query from user message"""
+        """Extract recipe search query from user message
+        Uses a set of regex patterns to capture likely user queries. If nothing
+        matches, falls back to checking for common food keywords.
+        Returns a cleaned query string or None.
+        """
+        # Normalize message for case-insensitive matching
         message_lower = message.lower()
         
-        # Check for recipe-specific patterns
+        # Patterns to match various natural-language ways of asking for recipes
         patterns = [
             r"(?:find|search|get|show).*?recipes?.*?(?:for|with|using)\s+(.+?)(?:\?|$)",
             r"recipes?.*?(?:for|with|using)\s+(.+?)(?:\?|$)",
@@ -79,24 +101,32 @@ class RecipeFinderAgent(BaseAgent):
             r"(.+?)\s+recipes?(?:\?|$)"
         ]
         
+        # Try each pattern in order and return the first meaningful capture group
         for pattern in patterns:
             match = re.search(pattern, message_lower)
             if match:
                 query = match.group(1).strip()
                 # Clean up common words
                 query = re.sub(r'\b(the|a|an|some|of|in|with)\b', '', query).strip()
+                # Only accept queries longer than 2 characters to avoid nonsense captures
                 if query and len(query) > 2:
                     return query
         
         # Check if message looks like ingredients or food names
         food_keywords = ['chicken', 'beef', 'pasta', 'salmon', 'vegetarian', 'vegan', 'soup', 'salad', 'dessert']
         if any(keyword in message_lower for keyword in food_keywords):
+            # Return the original message as a fallback (unmodified casing)
             return message.strip()
-        
+        #If not query is found return none
         return None
     
     async def _search_spoonacular_recipes(self, query: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Search for recipes using Spoonacular API"""
+        """Search for recipes using Spoonacular API
+        
+        Note: This method is declared `async` but uses the synchronous `requests`
+        library which will block the event loop. Consider switching to an async
+        HTTP client (aiohttp or httpx) when using this in a real async app.
+        """
         try:
             # Build API parameters
             params = {
@@ -113,6 +143,7 @@ class RecipeFinderAgent(BaseAgent):
             user_profile = context.get('user_profile', {})
             if 'dietary_preferences' in user_profile:
                 diet_map = {
+                    # Map generic preference names to Spoonacular parameter names
                     'vegetarian': 'vegetarian',
                     'vegan': 'vegan',
                     'gluten-free': 'glutenFree',
@@ -122,10 +153,11 @@ class RecipeFinderAgent(BaseAgent):
                 }
                 
                 for pref in user_profile['dietary_preferences']:
+                    # If the user's preference exists in the map, add it as a boolean param
                     if pref.lower() in diet_map:
                         params[diet_map[pref.lower()]] = True
             
-            # Search recipes
+            # Search recipes using the complexSearch endpoint
             url = f"{self.base_url}/complexSearch"
             response = requests.get(url, params=params, timeout=10)
             
@@ -143,9 +175,13 @@ class RecipeFinderAgent(BaseAgent):
                         'ready_in_minutes': recipe.get('readyInMinutes', 'N/A'),
                         'servings': recipe.get('servings', 'N/A'),
                         'source_url': recipe.get('sourceUrl'),
+                        # Short summary: clean HTML and truncate to 200 chars
                         'summary': self._clean_html(recipe.get('summary', ''))[:200] + '...',
+                        # Ingredients: use human-readable "original" description
                         'ingredients': [ing.get('original', '') for ing in recipe.get('extendedIngredients', [])],
+                        # Nutrition extraction delegated to helper
                         'nutrition': self._extract_nutrition(recipe.get('nutrition', {})),
+                        # Instructions fetched via separate helper (note: extra HTTP call)
                         'instructions': self._get_recipe_instructions(recipe.get('id')) if recipe.get('id') else [],
                         'health_score': recipe.get('healthScore', 0),
                         'price_per_serving': recipe.get('pricePerServing', 0)
@@ -154,15 +190,22 @@ class RecipeFinderAgent(BaseAgent):
                 
                 return processed_recipes
             else:
+                # Log non-200 responses for debugging
                 self.logger.warning(f"Spoonacular API error: {response.status_code}")
                 
         except Exception as e:
+            # Catch and log network or parsing errors
             self.logger.error(f"Error calling Spoonacular API: {e}")
         
+        # On failure return empty list to indicate no results
         return []
     
     def _get_recipe_instructions(self, recipe_id: int) -> List[str]:
-        """Get detailed instructions for a recipe"""
+        """Get detailed instructions for a recipe
+        
+        Fetches the analyzed Instructions endpoint and returns up to 8 step strings.
+        This method is synchronous and will block if called from an async context.
+        """
         try:
             url = f"{self.base_url}/{recipe_id}/analyzedInstructions"
             params = {'apiKey': self.spoonacular_api_key}
@@ -173,19 +216,26 @@ class RecipeFinderAgent(BaseAgent):
                 data = response.json()
                 instructions = []
                 
+                # Parse instruction sets and steps
                 for instruction_set in data:
                     for step in instruction_set.get('steps', []):
                         instructions.append(f"{step.get('number', '')}. {step.get('step', '')}")
                 
+                # Limit number of steps returned to keep results concise
                 return instructions[:8]  # Limit to 8 steps
                 
         except Exception as e:
+            # Log any errors when fetching step-by-step instructions
             self.logger.error(f"Error getting recipe instructions: {e}")
         
         return []
     
     def _extract_nutrition(self, nutrition_data: Dict) -> Dict[str, Any]:
-        """Extract key nutrition information"""
+        """Extract key nutrition information
+
+        The Spoonacular nutrition object contains a list of nutrient dicts; this
+        helper picks out a subset (calories, protein, carbs, fat, fiber, sugar, sodium).
+        """
         if not nutrition_data:
             return {}
         
@@ -203,6 +253,7 @@ class RecipeFinderAgent(BaseAgent):
             'Sodium': 'sodium'
         }
         
+        # Iterate over nutrients and populate nutrition_info for keys we care
         for nutrient in nutrients:
             name = nutrient.get('name', '')
             if name in nutrient_map:
@@ -220,23 +271,31 @@ class RecipeFinderAgent(BaseAgent):
         return re.sub(clean, '', text)
     
     def _format_recipe_response(self, recipes: List[Dict], query: str) -> str:
-        """Format recipes into readable response"""
+        """Format recipes into readable response
+        
+        reates a markdown-like string summarizing the top results and listing
+        quick nutrition, ingredients, and brief steps. Only the top 3 recipes
+        are shown in detail; the remainder are briefly listed.
+        """
         if not recipes:
             return f"I couldn't find any recipes for '{query}'. Try a different search term!"
         
+        # Header for formatted response
         response = f"**🍳 Recipe Search Results for '{query.title()}'**\n\n"
         response += f"Found {len(recipes)} delicious recipes:\n\n"
         
+        # Show details for the top 3 recipes
         for i, recipe in enumerate(recipes[:3], 1):  # Show top 3 in detail
             response += f"**{i}. {recipe['title']}** ⭐ Health Score: {recipe['health_score']}/100\n"
             response += f"⏱️ **Prep Time:** {recipe['ready_in_minutes']} minutes | 👥 **Serves:** {recipe['servings']}\n\n"
             
-            # Nutrition info
+            # Nutrition info (per serving) - show only if present
             nutrition = recipe.get('nutrition', {})
             if nutrition:
                 response += "**📊 Nutrition (per serving):**\n"
                 for key, data in nutrition.items():
                     if isinstance(data, dict):
+                        # Format numeric values to 1 decimal place
                         response += f"• {key.title()}: {data['amount']:.1f}{data['unit']}\n"
                 response += "\n"
             

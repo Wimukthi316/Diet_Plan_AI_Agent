@@ -45,12 +45,26 @@ export const authAPI = {
 };
 
 export const chatAPI = {
-  sendMessage: (message, context = {}) => 
-    api.post('/chat', { message, context }),
+  sendMessage: (message, context = {}, sessionId = null) => 
+    api.post('/chat', { message, context, session_id: sessionId }),
   getChatHistory: (limit = 50) => 
     api.get(`/chat/history?limit=${limit}`),
   clearChatHistory: () => 
     api.delete('/chat/history'),
+  
+  // Session management
+  getSessions: () => 
+    api.get('/chat/sessions'),
+  createSession: (title = 'New Chat') => 
+    api.post('/chat/sessions', { title }),
+  getSessionMessages: (sessionId) => 
+    api.get(`/chat/sessions/${sessionId}/messages`),
+  activateSession: (sessionId) => 
+    api.put(`/chat/sessions/${sessionId}/activate`),
+  deleteSession: (sessionId) => 
+    api.delete(`/chat/sessions/${sessionId}`),
+  updateSessionTitle: (sessionId, title) => 
+    api.put(`/chat/sessions/${sessionId}/title`, { title }),
 };
 
 // Nutrition Calculator Agent API
