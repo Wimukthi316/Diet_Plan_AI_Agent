@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader, MessageCircle } from 'lucide-react';
+import { Send, Bot, User, Loader, MessageCircle, Plus, MoreHorizontal, Trash2, Edit3, ArrowLeft } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import Layout from '../components/Layout';
+import { useNavigate } from 'react-router-dom';
 
 const ChatPage = () => {
   const [sessions, setSessions] = useState([]);
@@ -12,7 +12,10 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -167,6 +170,31 @@ const ChatPage = () => {
     }
   };
 
+  const startEditing = (session) => {
+    setEditingSessionId(session.id);
+    setEditingTitle(session.title);
+  };
+
+  const cancelEditing = () => {
+    setEditingSessionId(null);
+    setEditingTitle('');
+  };
+
+  const saveTitle = async (sessionId) => {
+    if (editingTitle.trim() && editingTitle !== sessions.find(s => s.id === sessionId)?.title) {
+      await handleRenameSession(sessionId, editingTitle.trim());
+    }
+    cancelEditing();
+  };
+
+  const handleKeyDown = (e, sessionId) => {
+    if (e.key === 'Enter') {
+      saveTitle(sessionId);
+    } else if (e.key === 'Escape') {
+      cancelEditing();
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || isLoading) return;
@@ -270,58 +298,154 @@ const ChatPage = () => {
   ];
 
   return (
-
-    <div className="max-w-6xl mx-auto">
-      {/* Modern Chat Container */}
-      <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden h-[calc(100vh-50px)] flex flex-col">
-        {/* Modern Chat Header */}
-        <div className="bg-green-800 px-8 py-6">
+    <div className="h-screen flex bg-gray-50">
+      {/* Chat Sessions Sidebar */}
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
-                <Bot className="w-7 h-7 text-green-800" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Merienda, cursive' }}>
-                  {activeSession?.title || 'New Chat'}
-                </h2>
-                {activeSession && (
-                  <p className="text-sm text-green-100">
-                    {activeSession.message_count} messages
-                  </p>
-                )}
-              </div>
+            <h2 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'Merienda, cursive' }}>
+              Chat History
+            </h2>
+            <button
+              onClick={createNewSession}
+              className="p-2 bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-lg hover:from-green-700 hover:to-emerald-800 transition-all duration-200 shadow-md hover:shadow-lg"
+              title="New Chat"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Sessions List */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoadingSessions ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader className="w-6 h-6 animate-spin text-green-600" />
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-medium">No chats yet</p>
+              <p className="text-xs mt-1">Start a new conversation to get started</p>
+            </div>
+          ) : (
+            <div className="p-3 space-y-2">
+              {sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`group relative p-4 rounded-xl cursor-pointer transition-all duration-200 ${activeSession?.id === session.id
+                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 shadow-sm'
+                    : 'hover:bg-gray-50 border-2 border-transparent'
+                    }`}
+                  onClick={() => handleSessionClick(session.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      {editingSessionId === session.id ? (
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, session.id)}
+                          onBlur={() => saveTitle(session.id)}
+                          className="w-full px-2 py-1 text-sm font-medium bg-white border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          autoFocus
+                        />
+                      ) : (
+                        <h3 className={`text-sm font-medium truncate ${activeSession?.id === session.id ? 'text-green-800' : 'text-gray-900'
+                          }`}>
+                          {session.title}
+                        </h3>
+                      )}
+                      <p className={`text-xs mt-1 ${activeSession?.id === session.id ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                        {session.message_count} messages
+                      </p>
+                    </div>
+
+                    {/* Session Actions */}
+                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing(session);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                        title="Rename"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSession(session.id);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Chat Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center space-x-3">
+            {/* Back Button */}
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+
+            <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center shadow-md">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Merienda, cursive' }}>
+                {activeSession?.title || 'AI Nutrition Assistant'}
+              </h1>
+              <p className="text-sm text-gray-500">
+                Powered by 3 specialized AI agents
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Modern Messages Container */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          {/* Loading history indicator */}
-          {isLoadingHistory && (
-            <div className="flex justify-center items-center h-32">
-              <div className="flex items-center space-x-3 text-gray-500">
-                <Loader className="w-6 h-6 animate-spin text-green-600" />
-                <span className="text-lg font-medium" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-                  Loading chat history...
-                </span>
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {isLoadingHistory ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <Loader className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
+                <p className="text-gray-500 font-medium">Loading chat history...</p>
               </div>
             </div>
-          )}
-
-          {/* Messages */}
-          <div className="space-y-6">
-            {!isLoadingHistory && messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`flex max-w-3xl ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${message.type === 'user'
-                      ? 'bg-green-800'
-                      : message.error
-                        ? 'bg-red-100 border-2 border-red-200'
-                        : 'bg-white border-2 border-green-200'
+          ) : (
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex items-start space-x-4 ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                    }`}
+                >
+                  {/* Avatar */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md flex-shrink-0 ${message.type === 'user'
+                    ? 'bg-gradient-to-br from-green-600 to-emerald-700'
+                    : message.error
+                      ? 'bg-red-100 border-2 border-red-200'
+                      : 'bg-white border-2 border-green-200'
                     }`}>
                     {message.type === 'user' ? (
                       <User className="w-5 h-5 text-white" />
@@ -330,105 +454,115 @@ const ChatPage = () => {
                     )}
                   </div>
 
-                  <div
-                    className={`px-5 py-3 rounded-2xl shadow-md ${message.type === 'user'
-                        ? 'bg-green-800 text-white'
+                  {/* Message Bubble */}
+                  <div className={`max-w-3xl ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
+                    <div
+                      className={`inline-block px-6 py-4 rounded-2xl shadow-sm ${message.type === 'user'
+                        ? 'bg-gradient-to-r from-green-600 to-emerald-700 text-white'
                         : message.error
-                          ? 'bg-red-50 border-2 border-red-200 text-red-800'
+                          ? 'bg-red-50 border border-red-200 text-red-800'
                           : 'bg-white border border-gray-200 text-gray-800'
-                      }`}
-                  >
-                    <div
-                      className="whitespace-pre-wrap leading-relaxed text-sm"
-                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                    >
-                      {message.content.split('**').map((part, index) =>
-                        index % 2 === 1 ? (
-                          <strong key={index} className="font-bold">
-                            {part}
-                          </strong>
-                        ) : (
-                          <span key={index}>{part}</span>
-                        )
-                      )}
-                    </div>
-                    <div
-                      className={`text-xs mt-2 ${message.type === 'user' ? 'text-green-100' : 'text-gray-400'
                         }`}
                     >
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        {message.content.split('**').map((part, index) =>
+                          index % 2 === 1 ? (
+                            <strong key={index} className="font-bold">
+                              {part}
+                            </strong>
+                          ) : (
+                            <span key={index}>{part}</span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                    <div className={`text-xs mt-2 ${message.type === 'user' ? 'text-gray-500' : 'text-gray-400'
+                      }`}>
                       {formatTimestamp(message.timestamp)}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-white border-2 border-green-200 rounded-xl flex items-center justify-center shadow-md">
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex items-start space-x-4">
+                  <div className="w-10 h-10 bg-white border-2 border-green-200 rounded-full flex items-center justify-center shadow-md">
                     <Bot className="w-5 h-5 text-green-600" />
                   </div>
-                  <div className="bg-white border border-gray-200 px-5 py-3 rounded-2xl shadow-md">
-                    <div className="flex items-center space-x-2">
-                      <Loader className="w-4 h-4 animate-spin text-green-600" />
-                      <span className="text-sm text-gray-700 font-medium">AI is thinking...</span>
+                  <div className="bg-white border border-gray-200 px-6 py-4 rounded-2xl shadow-sm">
+                    <div className="flex items-center space-x-3">
+                      <Loader className="w-5 h-5 animate-spin text-green-600" />
+                      <span className="text-gray-700 font-medium">AI is thinking...</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Modern Suggested Prompts */}
+        {/* Suggested Prompts */}
         {messages.length === 1 && (
-          <div className="border-t border-gray-200 px-6 py-6 bg-white">
-            <p className="text-lg font-semibold text-gray-700 mb-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-              Try asking:
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {suggestedPrompts.map((prompt, index) => (
-                <button
-                  key={index}
-                  onClick={() => setInputMessage(prompt)}
-                  className="px-4 py-2 bg-green-100 hover:bg-green-200 rounded-xl text-green-800 font-medium transition-all duration-200 border border-green-200 hover:border-green-300"
-                  style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                >
-                  {prompt}
-                </button>
-              ))}
+          <div className="border-t border-gray-200 bg-white px-6 py-4">
+            <div className="max-w-4xl mx-auto">
+              <p className="text-sm font-semibold text-gray-700 mb-3">
+                Try asking:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {suggestedPrompts.map((prompt, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setInputMessage(prompt)}
+                    className="px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium rounded-full border border-green-200 hover:border-green-300 transition-all duration-200"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Modern Input Section */}
-        <div className="border-t border-gray-200 p-6 bg-white">
-          <form onSubmit={handleSendMessage} className="flex gap-4">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Ask me about nutrition, recipes, or diet tracking..."
-              className="flex-1 px-6 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 bg-gray-50 font-medium text-lg transition-all duration-200"
-              disabled={isLoading}
-              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-            />
-            <button
-              type="submit"
-              disabled={!inputMessage.trim() || isLoading}
-              className="bg-green-800 hover:bg-green-900 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg transition-all duration-200 flex items-center gap-2"
-              style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-            >
-              <Send className="w-5 h-5" />
-              Send
-            </button>
-          </form>
+        {/* Input Area */}
+        <div className="border-t border-gray-200 bg-white px-6 py-4">
+          <div className="max-w-4xl mx-auto">
+            <form onSubmit={handleSendMessage} className="flex items-end space-x-4">
+              <div className="flex-1">
+                <textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e);
+                    }
+                  }}
+                  placeholder="Ask me about nutrition, recipes, or diet tracking..."
+                  rows={1}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-gray-50 resize-none transition-all duration-200"
+                  style={{
+                    minHeight: '50px',
+                    maxHeight: '120px',
+                    overflow: 'auto'
+                  }}
+                  disabled={isLoading}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!inputMessage.trim() || isLoading}
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+              >
+                <Send className="w-5 h-5" />
+                <span>Send</span>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
-
   );
 };
 
