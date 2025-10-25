@@ -334,6 +334,7 @@ class RecipeFinderAgent(BaseAgent):
     async def _general_recipe_response(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle general recipe questions with AI and personalized user context"""
         
+        # If no message provided, set a helpful default prompt
         if not message:
             message = "Tell me about recipe finding and what you can help me with"
         
@@ -361,6 +362,7 @@ class RecipeFinderAgent(BaseAgent):
             """
             greeting = f"👋 Hi {user_profile.get('name', 'there')}! "
         
+        # Construct an AI prompt that requests recipe advice tailored to the user
         if is_recipe_request:
             prompt = f"""
             {user_context}
@@ -408,6 +410,7 @@ class RecipeFinderAgent(BaseAgent):
                 "status": "success"
             }
         except Exception as e:
+            # If the model call fails, log and return a helpful fallback message
             self.logger.error(f"Error generating AI response: {e}")
             fallback_greeting = f"Hi {user_profile.get('name', 'there')}! " if user_profile and user_profile.get('name') else "Hi there! "
             return {
@@ -419,13 +422,16 @@ class RecipeFinderAgent(BaseAgent):
     async def _get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user profile information for personalized responses"""
         try:
+            # If no user_id provided, can't fetch profile
             if not user_id:
                 return None
                 
+            # Assume User.get is an async ORM call that returns a user model    
             user = await User.get(user_id)
             if not user:
                 return None
             
+            # Return a plain dict with the fields the agent cares about
             return {
                 "name": user.name,
                 "health_goals": user.profile.health_goals or [],
@@ -438,6 +444,7 @@ class RecipeFinderAgent(BaseAgent):
                 "gender": user.profile.gender
             }
         except Exception as e:
+            # Log DB/ORM errors and return None to indicate profile couldn't be fetched
             self.logger.error(f"Error fetching user profile: {e}")
             return None
     
@@ -451,3 +458,64 @@ class RecipeFinderAgent(BaseAgent):
             "data_sources": ["Spoonacular API", "Google Gemini AI"],
             "api_coverage": "5000+ recipes with nutrition data"
         }
+    # ------------------------------------------------------------------------------------------
+# End of RecipeFinderAgent
+#
+# This file implements the RecipeFinderAgent, a specialized AI agent for recipe discovery,
+# meal planning, and culinary guidance within the Diet Plan AI system. The agent leverages
+# both the Spoonacular API and Google Gemini AI to provide users with comprehensive, 
+# personalized recipe recommendations and cooking advice.
+#
+# Key Features and Design:
+# - The agent inherits from BaseAgent, gaining access to shared infrastructure such as
+#   logging, chat history management, and AI response generation.
+# - It is designed to process user requests related to recipes, ingredients, dietary
+#   preferences, and meal planning, making it a central component for users seeking
+#   culinary inspiration or nutrition-aligned meal ideas.
+# - The agent uses the Spoonacular API to search for recipes based on user queries,
+#   dietary restrictions, and ingredient lists. It processes and formats the results
+#   to present clear, actionable information, including nutrition breakdowns, ingredient
+#   lists, and step-by-step instructions.
+# - For more general or complex questions, or when API results are insufficient, the
+#   agent falls back to Google Gemini AI to generate helpful, context-aware responses.
+#   This ensures users always receive guidance, even for open-ended or personalized
+#   requests.
+#
+# Input Handling and Security:
+# - User input is sanitized to prevent injection attacks and ensure safe API usage.
+# - The agent uses regex-based parsing to extract recipe queries from natural language,
+#   supporting a wide range of user prompt styles.
+# - Dietary preferences and allergies are respected by mapping user profile data to
+#   Spoonacular API parameters, ensuring recommendations are safe and relevant.
+#
+# Output Formatting:
+# - Recipe results are formatted in a markdown-like style, making them easy to read
+#   and visually engaging for users. The agent highlights key nutrition facts, main
+#   ingredients, and concise instructions, while also providing links to full recipes.
+# - The agent is designed to be practical and encouraging, using emojis and friendly
+#   language to enhance user experience.
+#
+# Extensibility and Integration:
+# - The agent is modular and can be extended to support additional APIs, more advanced
+#   filtering, or deeper integration with user data (e.g., meal logging, shopping lists).
+# - It is intended to work seamlessly with other agents in the system, such as the
+#   DietTrackerAgent and NutritionCalculatorAgent, supporting a holistic approach to
+#   diet and wellness.
+#
+# Error Handling and Robustness:
+# - The agent includes comprehensive error handling for API failures, network issues,
+#   and unexpected input, ensuring graceful degradation and helpful fallback responses.
+# - Logging is used throughout to aid in debugging and monitoring agent performance.
+#
+# Usage Scenarios:
+# - Users can ask for recipes based on ingredients, dietary needs, or meal types.
+# - The agent can suggest meal plans, provide cooking instructions, and help users
+#   discover new dishes aligned with their health goals.
+# - It supports both direct recipe searches and open-ended culinary questions,
+#   making it versatile for a wide range of user needs.
+#
+# In summary, the RecipeFinderAgent is a powerful, user-centric component of the Diet
+# Plan AI system, designed to make healthy eating enjoyable, accessible, and tailored
+# to individual preferences. Its combination of API-driven data and AI-generated
+# guidance ensures users always have support in their culinary journey.
+# ------------------------------------------------------------------------------------------
