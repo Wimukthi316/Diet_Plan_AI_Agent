@@ -11,6 +11,7 @@ const ChatPage = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -54,9 +55,10 @@ const ChatPage = () => {
 
   const loadSessionMessages = async (sessionId) => {
     try {
+      setIsLoadingHistory(true);
       const response = await chatAPI.getSessionMessages(sessionId);
       const messagesData = response.data.messages || [];
-      
+
       // Convert to UI format
       const formattedMessages = messagesData.flatMap((item, index) => {
         const msgs = [];
@@ -89,6 +91,8 @@ const ChatPage = () => {
       console.error('Error loading session messages:', error);
       toast.error('Failed to load messages');
       showWelcomeMessage();
+    } finally {
+      setIsLoadingHistory(false);
     }
   };
 
@@ -126,7 +130,7 @@ const ChatPage = () => {
       await chatAPI.deleteSession(sessionId);
       const updatedSessions = sessions.filter(s => s.id !== sessionId);
       setSessions(updatedSessions);
-      
+
       // If deleted session was active, switch to another
       if (activeSession?.id === sessionId) {
         if (updatedSessions.length > 0) {
@@ -135,7 +139,7 @@ const ChatPage = () => {
           await createNewSession();
         }
       }
-      
+
       toast.success('Chat deleted');
     } catch (error) {
       console.error('Error deleting session:', error);
@@ -146,16 +150,16 @@ const ChatPage = () => {
   const handleRenameSession = async (sessionId, newTitle) => {
     try {
       await chatAPI.updateSessionTitle(sessionId, newTitle);
-      const updatedSessions = sessions.map(s => 
+      const updatedSessions = sessions.map(s =>
         s.id === sessionId ? { ...s, title: newTitle } : s
       );
       setSessions(updatedSessions);
-      
+
       // Update active session if it's the one being renamed
       if (activeSession?.id === sessionId) {
         setActiveSession({ ...activeSession, title: newTitle });
       }
-      
+
       toast.success('Chat renamed');
     } catch (error) {
       console.error('Error renaming session:', error);
@@ -313,13 +317,12 @@ const ChatPage = () => {
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`flex max-w-3xl ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
-                    message.type === 'user'
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${message.type === 'user'
                       ? 'bg-green-800'
                       : message.error
-                      ? 'bg-red-100 border-2 border-red-200'
-                      : 'bg-white border-2 border-green-200'
-                  }`}>
+                        ? 'bg-red-100 border-2 border-red-200'
+                        : 'bg-white border-2 border-green-200'
+                    }`}>
                     {message.type === 'user' ? (
                       <User className="w-5 h-5 text-white" />
                     ) : (
@@ -328,13 +331,12 @@ const ChatPage = () => {
                   </div>
 
                   <div
-                    className={`px-5 py-3 rounded-2xl shadow-md ${
-                      message.type === 'user'
+                    className={`px-5 py-3 rounded-2xl shadow-md ${message.type === 'user'
                         ? 'bg-green-800 text-white'
                         : message.error
-                        ? 'bg-red-50 border-2 border-red-200 text-red-800'
-                        : 'bg-white border border-gray-200 text-gray-800'
-                    }`}
+                          ? 'bg-red-50 border-2 border-red-200 text-red-800'
+                          : 'bg-white border border-gray-200 text-gray-800'
+                      }`}
                   >
                     <div
                       className="whitespace-pre-wrap leading-relaxed text-sm"
@@ -351,9 +353,8 @@ const ChatPage = () => {
                       )}
                     </div>
                     <div
-                      className={`text-xs mt-2 ${
-                        message.type === 'user' ? 'text-green-100' : 'text-gray-400'
-                      }`}
+                      className={`text-xs mt-2 ${message.type === 'user' ? 'text-green-100' : 'text-gray-400'
+                        }`}
                     >
                       {formatTimestamp(message.timestamp)}
                     </div>
