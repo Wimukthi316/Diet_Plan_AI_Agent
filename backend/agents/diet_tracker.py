@@ -345,7 +345,10 @@ class DietTrackerAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error calculating personalized goals: {e}")
             return None
-    
+    """
+        Returns agent's description, role, capabilities, and protocols.
+        Useful for system introspection and documentation.
+        """
     async def _analyze_trends(self, user_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze eating patterns and trends"""
         logs = await self._get_nutrition_logs(user_id, days=14)
