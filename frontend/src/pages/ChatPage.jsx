@@ -112,7 +112,7 @@ const ChatPage = () => {
     setMessages([{
       id: 'welcome',
       type: 'ai',
-      content: "**AI Nutrition Assistant**\\n*Powered by 3 specialized AI agents*\\n\\nHello! I'm your AI nutrition assistant. I can help you with:\\n\\n• Analyzing food nutrition\\n• Finding healthy recipes\\n• Tracking your diet progress\\n• Answering nutrition questions\\n\\nWhat would you like to know today?",
+      content: "### **🤖 AI Nutrition Assistant**\n*Powered by 3 specialized AI agents*\n\nHello! I'm your AI nutrition assistant. I can help you with:\n\n• Analyzing food nutrition\n• Finding healthy recipes\n• Tracking your diet progress\n• Answering nutrition questions\n\nWhat would you like to know today?",
       timestamp: new Date(),
       agent: 'System'
     }]);
