@@ -279,11 +279,11 @@ const ProfilePage = () => {
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
         {/* Simplified Hero Header Section */}
         <div className="bg-white rounded-2xl md:rounded-3xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-green-700 to-green-600 p-4 sm:p-6 md:p-8">
+          <div className="bg-green-700 p-4 sm:p-6 md:p-8">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-green-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-green-600 rounded-2xl flex items-center justify-center shadow-md">
                   <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: 'Merienda, cursive' }}>
                     {user?.name?.charAt(0)?.toUpperCase() || "U"}
                   </span>
@@ -291,34 +291,33 @@ const ProfilePage = () => {
                 <button className="absolute -bottom-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl shadow-md flex items-center justify-center border-2 border-green-600 hover:scale-105 transition-transform">
                   <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-green-700" />
                 </button>
-                <div className="absolute top-1 right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-green-700 shadow-sm"></div>
               </div>
               
               {/* User Info */}
               <div className="text-center sm:text-left flex-1 min-w-0">
-                <div className="inline-block mb-2 px-3 py-1 bg-green-600 rounded-full">
+                <div className="inline-block mb-2 px-3 py-1 bg-green-800 rounded-full">
                   <span className="text-green-100 text-xs font-semibold uppercase tracking-wide" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                     ✨ Nutrition Expert
                   </span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 truncate" style={{ fontFamily: 'Merienda, cursive' }}>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 break-words" style={{ fontFamily: 'Merienda, cursive' }}>
                   {user?.name || "User"}
                 </h1>
-                <p className="text-sm sm:text-base md:text-lg text-green-50 mb-4 truncate" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                <p className="text-sm sm:text-base text-green-50 mb-4 break-words" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                   {user?.email}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                  <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-600 text-white rounded-full text-xs sm:text-sm font-semibold" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                  <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-800 text-green-100 rounded-full text-xs sm:text-sm font-semibold" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                     💎 Premium Member
                   </span>
-                  <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-600 text-white rounded-full text-xs sm:text-sm font-semibold" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                  <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-800 text-green-100 rounded-full text-xs sm:text-sm font-semibold" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
                     🔥 Active Streak: 15 days
                   </span>
                 </div>
               </div>
               
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto flex-shrink-0">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   className="flex items-center justify-center gap-2 py-2.5 px-4 sm:px-5 bg-white text-green-700 rounded-xl font-semibold shadow-md hover:shadow-lg hover:bg-gray-50 transition-all text-sm sm:text-base"
