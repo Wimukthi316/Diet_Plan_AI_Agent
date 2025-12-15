@@ -368,44 +368,137 @@ const ChatPage = () => {
                 key={message.id}
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`flex max-w-3xl ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
-                    message.type === 'user'
-                      ? 'bg-green-800'
-                      : message.error
-                      ? 'bg-red-100 border-2 border-red-200'
-                      : 'bg-white border-2 border-green-200'
-                  }`}>
-                    {message.type === 'user' ? (
-                      <User className="w-5 h-5 text-white" />
-                    ) : (
-                      <Bot className={`w-5 h-5 ${message.error ? 'text-red-500' : 'text-green-600'}`} />
-                    )}
-                  </div>
+                {/* Welcome Message - Special Styling */}
+                {message.id === 'welcome' ? (
+                  <div className="w-full flex flex-col items-center justify-center py-12 px-6">
+                    {/* Animated Bot Icon */}
+                    <div className="relative mb-8">
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-600 rounded-full blur-xl opacity-50 animate-pulse"></div>
+                      <div className="relative w-24 h-24 bg-gradient-to-br from-green-600 to-green-800 rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300">
+                        <Bot className="w-12 h-12 text-white" />
+                      </div>
+                    </div>
 
-                  <div
-                    className={`px-5 py-3 rounded-2xl shadow-md ${
+                    {/* Welcome Title */}
+                    <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-green-700 via-green-600 to-green-800 bg-clip-text text-transparent" style={{ fontFamily: 'Merienda, cursive' }}>
+                      AI Nutrition Assistant
+                    </h1>
+                    
+                    {/* Subtitle */}
+                    <p className="text-lg text-gray-600 mb-8 italic" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Powered by 3 specialized AI agents
+                    </p>
+
+                    {/* Greeting */}
+                    <p className="text-xl text-gray-700 mb-12 text-center max-w-2xl" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      Hello! I&apos;m your AI nutrition assistant. I can help you with:
+                    </p>
+
+                    {/* Feature Cards Grid */}
+                    <div className="grid grid-cols-2 gap-6 w-full max-w-3xl mb-12">
+                      <div className="group bg-white hover:bg-green-50 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-green-500">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <span className="text-2xl">🥗</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              Analyze Nutrition
+                            </h3>
+                            <p className="text-sm text-gray-600">Get detailed nutritional information for any food</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="group bg-white hover:bg-green-50 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-green-500">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <span className="text-2xl">🍳</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              Find Recipes
+                            </h3>
+                            <p className="text-sm text-gray-600">Discover healthy recipes tailored to you</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="group bg-white hover:bg-green-50 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-green-500">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <span className="text-2xl">📊</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              Track Progress
+                            </h3>
+                            <p className="text-sm text-gray-600">Monitor your daily diet and achievements</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="group bg-white hover:bg-green-50 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-green-500">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <span className="text-2xl">💡</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                              Get Answers
+                            </h3>
+                            <p className="text-sm text-gray-600">Ask any nutrition-related questions</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Call to Action */}
+                    <p className="text-lg text-gray-700 font-medium" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
+                      What would you like to know today? 🌟
+                    </p>
+                  </div>
+                ) : (
+                  /* Regular Message Styling */
+                  <div className={`flex max-w-3xl ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
                       message.type === 'user'
-                        ? 'bg-green-800 text-white'
+                        ? 'bg-green-800'
                         : message.error
-                        ? 'bg-red-50 border-2 border-red-200 text-red-800'
-                        : 'bg-white border border-gray-200 text-gray-800'
-                    }`}
-                  >
+                        ? 'bg-red-100 border-2 border-red-200'
+                        : 'bg-white border-2 border-green-200'
+                    }`}>
+                      {message.type === 'user' ? (
+                        <User className="w-5 h-5 text-white" />
+                      ) : (
+                        <Bot className={`w-5 h-5 ${message.error ? 'text-red-500' : 'text-green-600'}`} />
+                      )}
+                    </div>
+
                     <div
-                      className="leading-relaxed text-sm space-y-3"
-                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
-                    />
-                    <div
-                      className={`text-xs mt-2 ${
-                        message.type === 'user' ? 'text-green-100' : 'text-gray-400'
+                      className={`px-5 py-3 rounded-2xl shadow-md ${
+                        message.type === 'user'
+                          ? 'bg-green-800 text-white'
+                          : message.error
+                          ? 'bg-red-50 border-2 border-red-200 text-red-800'
+                          : 'bg-white border border-gray-200 text-gray-800'
                       }`}
                     >
-                      {formatTimestamp(message.timestamp)}
+                      <div
+                        className="leading-relaxed text-sm space-y-3"
+                        style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                        dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
+                      />
+                      <div
+                        className={`text-xs mt-2 ${
+                          message.type === 'user' ? 'text-green-100' : 'text-gray-400'
+                        }`}
+                      >
+                        {formatTimestamp(message.timestamp)}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
 
