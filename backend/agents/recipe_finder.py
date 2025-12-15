@@ -20,7 +20,7 @@ class RecipeFinderAgent(BaseAgent):
         super().__init__(
             name="RecipeFinder",
             role="Recipe discovery, meal planning, and culinary guidance specialist",
-            model_name="gemini-2.0-flash"
+            model_name="gemini-2.5-flash"
         )
 
         # List of capabilities this agent advertises

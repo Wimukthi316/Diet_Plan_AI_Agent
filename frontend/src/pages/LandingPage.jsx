@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowRight, Brain, Target, Users, Shield, Zap, Star, Leaf, Play, Award, Heart } from "lucide-react"
+import { Brain, Target, Users, Shield, Zap, Award, Heart } from "lucide-react"
 import FaviconIcon from '../components/FaviconIcon'
 
 export default function LandingPage() {

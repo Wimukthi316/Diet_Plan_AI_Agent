@@ -27,11 +27,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle authentication errors
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
       window.location.href = '/login';
+      return Promise.reject(error);
     }
+
+    // Enhance error object with user-friendly messages
+    if (!error.response) {
+      // Network error - server is unreachable
+      error.userMessage = 'Unable to connect to the server. Please make sure the backend is running on http://localhost:8000';
+    } else if (error.response.status >= 500) {
+      // Server error
+      error.userMessage = error.response.data?.detail || 'Server error. Please try again later.';
+    } else if (error.response.status >= 400) {
+      // Client error
+      error.userMessage = error.response.data?.detail || 'Request failed. Please check your input and try again.';
+    }
+
     return Promise.reject(error);
   }
 );

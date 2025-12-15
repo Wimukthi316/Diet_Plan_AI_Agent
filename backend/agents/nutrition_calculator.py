@@ -15,7 +15,7 @@ class NutritionCalculatorAgent(BaseAgent):
         super().__init__(
             name="NutritionCalculator",
             role="Nutritional analysis, calorie counting, and nutrient breakdown specialist",
-            model_name="gemini-2.0-flash"
+            model_name="gemini-2.5-flash"
         )
         
         self.capabilities = [
@@ -30,6 +30,11 @@ class NutritionCalculatorAgent(BaseAgent):
         self.nutritionix_app_id = os.getenv("NUTRITIONIX_APP_ID")
         self.nutritionix_api_key = os.getenv("NUTRITIONIX_API_KEY")
         self.nutritionix_url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
+        
+        # Validate API credentials
+        self.nutritionix_available = bool(self.nutritionix_app_id and self.nutritionix_api_key)
+        if not self.nutritionix_available:
+            self.logger.warning("Nutritionix API credentials not found. Will use AI fallback for all requests.")
         
         self.headers = {
             'x-app-id': self.nutritionix_app_id,
@@ -48,7 +53,7 @@ class NutritionCalculatorAgent(BaseAgent):
             # Extract food query from message
             food_query = self._extract_food_query(message)
             
-            if food_query:
+            if food_query and self.nutritionix_available:
                 # Get nutrition data from Nutritionix API
                 nutrition_data = await self._get_nutritionix_data(food_query)
                 
@@ -149,8 +154,18 @@ class NutritionCalculatorAgent(BaseAgent):
                     return nutrition_data
                     
             else:
-                self.logger.warning(f"Nutritionix API error: {response.status_code}")
+                if response.status_code == 401:
+                    self.logger.warning("Nutritionix API: Invalid credentials (401). Please check NUTRITIONIX_APP_ID and NUTRITIONIX_API_KEY in .env file.")
+                    self.nutritionix_available = False
+                elif response.status_code == 403:
+                    self.logger.warning("Nutritionix API: Access forbidden (403). Check API key permissions.")
+                elif response.status_code == 429:
+                    self.logger.warning("Nutritionix API: Rate limit exceeded (429). Using AI fallback.")
+                else:
+                    self.logger.warning(f"Nutritionix API error: {response.status_code}")
                 
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Network error calling Nutritionix API: {e}")
         except Exception as e:
             self.logger.error(f"Error calling Nutritionix API: {e}")
         

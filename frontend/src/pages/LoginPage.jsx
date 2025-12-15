@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Mail, Lock, XCircle } from 'lucide-react';
@@ -149,7 +149,7 @@ const LoginPage = () => {
             </h1>
             <p className="text-lg sm:text-xl text-black mt-4 lg:mt-12 mb-2 font-medium px-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>Sign in to continue your nutrition journey</p>
             <p className="text-gray-500 text-sm px-4" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 to="/register"
                 className="font-semibold text-green-600 hover:text-green-700 transition-colors duration-200 underline decoration-2 underline-offset-4 decoration-green-200 hover:decoration-green-300"
@@ -250,7 +250,7 @@ const LoginPage = () => {
                           </p>
                           {loginError.includes('email') && (
                             <p className="text-xs text-red-600 mt-2">
-                              💡 Make sure you're using the same email address you registered with.
+                              💡 Make sure you&apos;re using the same email address you registered with.
                             </p>
                           )}
                           {loginError.includes('password') && (
