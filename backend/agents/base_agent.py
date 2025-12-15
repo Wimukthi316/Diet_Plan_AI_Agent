@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 import json
 import logging
 from datetime import datetime
+import time
+import asyncio
 
 load_dotenv()
 
@@ -19,7 +21,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 class BaseAgent(ABC):
     """Base class for all AI agents"""
     
-    def __init__(self, name: str, role: str, model_name: str = "gemini-2.0-flash"):
+    def __init__(self, name: str, role: str, model_name: str = "gemini-1.5-flash"):
         self.name = name
         self.role = role
         self.model = genai.GenerativeModel(model_name)
@@ -31,6 +33,10 @@ class BaseAgent(ABC):
         
         # Chat history storage (in production, this should be in a database)
         self.chat_histories = {}
+        
+        # Rate limiting to prevent quota exhaustion
+        self.last_api_call = 0
+        self.min_delay_between_calls = 1.0  # 1 second delay between API calls
         
     def _get_chat_history(self, user_id: str) -> List[Dict[str, Any]]:
         """Get chat history for a user"""
@@ -74,7 +80,16 @@ class BaseAgent(ABC):
             # Log the prompt for debugging
             self.logger.info(f"Generating response for prompt: {prompt[:100]}...")
             
+            # Rate limiting: Add delay between API calls to prevent quota exhaustion
+            current_time = time.time()
+            time_since_last_call = current_time - self.last_api_call
+            if time_since_last_call < self.min_delay_between_calls:
+                delay = self.min_delay_between_calls - time_since_last_call
+                self.logger.debug(f"Rate limiting: waiting {delay:.2f}s before API call")
+                await asyncio.sleep(delay)
+            
             # Generate response
+            self.last_api_call = time.time()
             response = self.model.generate_content(full_prompt)
             
             # Check if response is valid
