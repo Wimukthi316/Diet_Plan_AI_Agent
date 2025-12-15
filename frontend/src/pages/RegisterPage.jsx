@@ -204,18 +204,43 @@ const RegisterPage = () => {
     "paleo",
     "mediterranean",
     "low_carb",
+    "low_fat",
     "gluten_free",
     "dairy_free",
+    "nut_free",
+    "soy_free",
+    "halal",
+    "kosher",
+    "whole_30",
+    "dash_diet",
+    "intermittent_fasting",
+    "carnivore",
+    "flexitarian",
+    "raw_food",
   ]
 
   const healthGoalOptions = [
     "weight_loss",
     "weight_gain",
     "muscle_gain",
+    "muscle_definition",
     "maintenance",
     "heart_health",
     "diabetes_management",
+    "blood_pressure_control",
+    "cholesterol_management",
+    "digestive_health",
+    "immune_support",
+    "energy_boost",
+    "better_sleep",
+    "stress_reduction",
+    "anti_aging",
     "sports_performance",
+    "endurance_training",
+    "flexibility_mobility",
+    "bone_health",
+    "skin_health",
+    "general_wellness",
   ]
 
   return (
@@ -575,11 +600,12 @@ const RegisterPage = () => {
                       onChange={handleChange}
                       className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 bg-white/80 backdrop-blur-sm text-gray-900 font-medium hover:border-gray-300"
                     >
-                      <option value="sedentary">Sedentary (little or no exercise)</option>
-                      <option value="lightly_active">Lightly Active (light exercise 1-3 days/week)</option>
-                      <option value="moderately_active">Moderately Active (moderate exercise 3-5 days/week)</option>
-                      <option value="very_active">Very Active (hard exercise 6-7 days/week)</option>
-                      <option value="extra_active">Extra Active (very hard exercise, physical job)</option>
+                      <option value="sedentary">Sedentary - Little to no exercise, desk job</option>
+                      <option value="lightly_active">Lightly Active - Light exercise 1-3 days/week</option>
+                      <option value="moderately_active">Moderately Active - Moderate exercise 3-5 days/week</option>
+                      <option value="very_active">Very Active - Hard exercise 6-7 days/week</option>
+                      <option value="extra_active">Extra Active - Very hard exercise & physical job</option>
+                      <option value="athlete">Athlete - Professional or competitive athlete training</option>
                     </select>
                   </div>
 

@@ -43,7 +43,10 @@ const ChatPage = () => {
         await loadSessionMessages(sessionsData[0].id);
       } else {
         // Create a new session if none exist
-        await createNewSession();
+        const newSession = await createNewSession();
+        if (newSession) {
+          setSessions([newSession]);
+        }
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -82,7 +85,13 @@ const ChatPage = () => {
         return msgs;
       });
 
-      setMessages(formattedMessages);
+      // Show welcome message if session has no messages
+      if (formattedMessages.length === 0) {
+        showWelcomeMessage();
+      } else {
+        setMessages(formattedMessages);
+      }
+      
       setActiveSession(response.data.session);
 
       // Activate this session
@@ -98,13 +107,14 @@ const ChatPage = () => {
     try {
       const response = await chatAPI.createSession('New Chat');
       const newSession = response.data;
-      setSessions([newSession, ...sessions]);
+      // Don't update sessions here - let the caller handle it
       setActiveSession(newSession);
       showWelcomeMessage();
       return newSession;
     } catch (error) {
       console.error('Error creating session:', error);
       toast.error('Failed to create new chat');
+      return null;
     }
   };
 
@@ -127,15 +137,23 @@ const ChatPage = () => {
     try {
       await chatAPI.deleteSession(sessionId);
       const updatedSessions = sessions.filter(s => s.id !== sessionId);
-      setSessions(updatedSessions);
       
       // If deleted session was active, switch to another
       if (activeSession?.id === sessionId) {
         if (updatedSessions.length > 0) {
+          setSessions(updatedSessions);
           await loadSessionMessages(updatedSessions[0].id);
         } else {
-          await createNewSession();
+          // Create new session when no sessions left
+          const newSession = await createNewSession();
+          if (newSession) {
+            setSessions([newSession]);
+            setActiveSession(newSession);
+          }
         }
+      } else {
+        // Just update the sessions list if deleted session wasn't active
+        setSessions(updatedSessions);
       }
       
       toast.success('Chat deleted');
@@ -197,8 +215,10 @@ const ChatPage = () => {
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Reload sessions to update message counts and titles
-      await loadSessions();
+      // Reload sessions to update message counts and titles (without creating new session)
+      const sessionsResponse = await chatAPI.getSessions();
+      const sessionsData = sessionsResponse.data.sessions || [];
+      setSessions(sessionsData);
     } catch (error) {
       console.error('Chat error:', error);
       
@@ -320,11 +340,11 @@ const ChatPage = () => {
   };
 
   const suggestedPrompts = [
-    "Analyze the nutrition in a banana",
-    "Find me a healthy recipe for dinner",
-    "Track my daily progress",
-    "What are good protein sources?",
-    "Create a meal plan for weight loss"
+    "Calculate my daily caloric needs",
+    "Suggest high-protein meal options",
+    "Analyze macro breakdown for chicken breast",
+    "Design a 7-day meal plan for muscle gain",
+    "What are the best foods for heart health?"
   ];
 
   return (
