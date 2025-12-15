@@ -336,30 +336,9 @@ const ChatPage = () => {
       onDeleteSession={handleDeleteSession}
       onRenameSession={handleRenameSession}
     >
-      <div className="h-[calc(100vh-120px)]">
+      <div className="h-full">
         {/* Main Chat Area */}
-        <div className="h-full flex flex-col bg-white rounded-2xl shadow-lg border border-gray-200">
-        {/* Chat Header */}
-        <div className="bg-gradient-to-r from-green-800 to-green-700 px-8 py-5 rounded-t-2xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
-                <Bot className="w-7 h-7 text-green-800" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Merienda, cursive' }}>
-                  {activeSession?.title || 'New Chat'}
-                </h2>
-                {activeSession && (
-                  <p className="text-sm text-green-100">
-                    {activeSession.message_count} messages
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <div className="h-full flex flex-col bg-white">
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
           <div className="max-w-4xl mx-auto space-y-6">
@@ -545,7 +524,7 @@ const ChatPage = () => {
         )}
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 p-6 bg-white rounded-b-2xl">
+        <div className="border-t border-gray-200 p-6 bg-white">
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSendMessage} className="flex gap-3">
               <input
