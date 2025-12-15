@@ -15,7 +15,6 @@ import {
   Target,
   Heart,
   ArrowRight,
-  ArrowLeft,
 } from "lucide-react"
 import LoadingSpinner from "../components/LoadingSpinner"
 import FaviconIcon from "../components/FaviconIcon"
@@ -236,7 +235,7 @@ const RegisterPage = () => {
             </div>
             <h2 className="text-2xl font-bold mb-4" style={{ fontFamily: 'Merienda, cursive' }}>Transform Your Health Journey</h2>
             <p className="text-sm text-white" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-              Join thousands who've discovered personalized nutrition with AI-powered meal planning
+              Join thousands who&apos;ve discovered personalized nutrition with AI-powered meal planning
             </p>
           </div>
         </div>

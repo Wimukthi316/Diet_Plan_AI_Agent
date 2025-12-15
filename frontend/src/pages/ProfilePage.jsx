@@ -748,7 +748,7 @@ const ProfilePage = () => {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-                  Today's Meals ({todaysMeals.length})
+                  Today&apos;s Meals ({todaysMeals.length})
                 </h3>
                 {todaysMeals.length > 0 && (
                   <button
@@ -781,7 +781,7 @@ const ProfilePage = () => {
                     No meals logged yet today
                   </p>
                   <p className="text-gray-400 text-sm mt-2" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-                    Click "Add Meal" to start tracking your food intake
+                    Click &quot;Add Meal&quot; to start tracking your food intake
                   </p>
                 </div>
               ) : (

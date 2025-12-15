@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchUserProfile = async () => {
@@ -56,10 +57,11 @@ export const AuthProvider = ({ children }) => {
       
       if (error.response?.data?.detail) {
         message = error.response.data.detail;
-      } else if (error.message === 'Network Error') {
-        message = 'Unable to connect to the server. Please check your internet connection and try again.';
-      } else if (error.code === 'ECONNREFUSED') {
-        message = 'Server is not available. Please try again later.';
+      } else if (!error.response) {
+        // No response means network error or server is down
+        message = 'Unable to connect to the server. Please ensure the backend is running on http://localhost:8000';
+      } else if (error.response?.status >= 500) {
+        message = 'Server error. Please try again later.';
       }
       
       // Don't show toast for login errors - let the form handle it

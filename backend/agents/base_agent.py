@@ -92,8 +92,16 @@ class BaseAgent(ABC):
             return response_text
             
         except Exception as e:
+            error_str = str(e)
             self.logger.error(f"Error generating response: {e}")
-            return f"I apologize, but I encountered an error while processing your request. Please check your internet connection and try again."
+            
+            # Check if it's a quota/rate limit error
+            if '429' in error_str or 'quota' in error_str.lower() or 'rate limit' in error_str.lower():
+                return self._get_quota_exceeded_fallback(prompt, context)
+            elif 'api key' in error_str.lower() or '401' in error_str or '403' in error_str:
+                return "⚠️ API configuration issue detected. Using offline mode. Please check your API keys in the .env file."
+            else:
+                return "I apologize, but I encountered an error while processing your request. Please try again."
     
     def _prepare_prompt_with_history(self, prompt: str, context: Dict[str, Any] = None, user_id: str = None) -> str:
         """Prepare prompt with agent context, role, and chat history"""
@@ -161,6 +169,78 @@ You must:
         """Log agent interactions for monitoring"""
         self.logger.info(f"Request processed: {request.get('message', 'N/A')[:100]}...")
         self.logger.info(f"Response generated: {response.get('message', 'N/A')[:100]}...")
+    
+    def _get_quota_exceeded_fallback(self, prompt: str, context: Dict[str, Any] = None) -> str:
+        """Provide fallback response when API quota is exceeded"""
+        # Extract key information from the prompt to provide a relevant fallback
+        prompt_lower = prompt.lower()
+        
+        if 'nutrition' in prompt_lower or 'food' in prompt_lower or 'calories' in prompt_lower:
+            return """⚠️ **API Quota Limit Reached**
+
+I'm currently unable to access the AI service due to quota limits. However, I can still help you!
+
+**What I can do:**
+• Use the Nutritionix database for specific food lookups
+• Provide general nutrition guidelines
+• Access stored information about common foods
+
+**Tips while the AI service recovers:**
+1. Try searching for specific foods (e.g., "banana", "chicken breast")
+2. Use the nutrition database features
+3. The quota typically resets within 24 hours
+
+Please try asking about a specific food item, and I'll use the nutrition database to help you!"""
+        
+        elif 'recipe' in prompt_lower or 'meal' in prompt_lower:
+            return """⚠️ **AI Service Temporarily Limited**
+
+The AI recipe service has reached its quota limit. While it recovers:
+
+**Alternative Options:**
+• Use saved recipes in your profile
+• Browse nutrition data for ingredients
+• The service will be restored within 24 hours
+
+You can still search for specific foods and track your nutrition!"""
+        
+        elif 'track' in prompt_lower or 'progress' in prompt_lower or 'log' in prompt_lower:
+            return """⚠️ **AI Analysis Temporarily Unavailable**
+
+The AI analysis service has reached its daily quota. However:
+
+**You can still:**
+• Log your meals using the nutrition database
+• View your saved nutrition data
+• Track calories and macros
+
+**AI features will return:**
+• Typically within 24 hours
+• Check your Google Gemini API quota at: https://ai.google.dev/usage
+
+Continue tracking your meals - detailed insights will be available once the service resets!"""
+        
+        else:
+            return """⚠️ **AI Service Quota Exceeded**
+
+The AI assistant has reached its daily usage limit. This is temporary!
+
+**What's happening:**
+• Google Gemini API free tier has daily quotas
+• Your quota will reset within 24 hours
+• Check usage at: https://ai.google.dev/usage
+
+**What you can do:**
+1. Use specific food database lookups
+2. Access saved nutrition information
+3. Log meals manually
+4. Upgrade to Gemini API paid tier for unlimited access
+
+**To resolve permanently:**
+• Visit https://ai.google.dev/gemini-api/docs/pricing
+• Upgrade your API plan or wait for quota reset
+
+I apologize for the inconvenience!"""
     
     def get_health_status(self) -> Dict[str, Any]:
         """Get agent health status"""

@@ -4,12 +4,10 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import {
-  MessageCircle,
   TrendingUp,
   Target,
   Calendar,
   Activity,
-  Zap,
   Clock,
   ArrowRight,
   Heart,
@@ -117,7 +115,7 @@ const Dashboard = () => {
                 <span className="text-emerald-400">{user?.name?.split(" ")[0] || "Champion"}</span>!
               </h1>
               <p className="text-gray-200 text-xl md:text-2xl leading-relaxed mb-8 max-w-2xl">
-                Every healthy choice brings you closer to your best self. Let's make today extraordinary!
+                Every healthy choice brings you closer to your best self. Let&apos;s make today extraordinary!
               </p>
 
               {/* Achievement Badges */}
@@ -173,7 +171,7 @@ const Dashboard = () => {
                 </div>
                 <span className="text-2xl">🔥</span>
               </div>
-              <p className="text-gray-600 text-sm font-medium mb-1">Today's Energy</p>
+              <p className="text-gray-600 text-sm font-medium mb-1">Today&apos;s Energy</p>
               <p className="text-3xl font-bold text-gray-900 mb-2">{stats.todayCalories} <span className="text-base text-gray-500">kcal</span></p>
               <div className="flex items-center text-emerald-600 text-sm font-medium">
                 <TrendingUp className="w-4 h-4 mr-1" />

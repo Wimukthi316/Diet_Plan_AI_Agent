@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader, MessageCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Send, Bot, User, Loader } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
@@ -10,6 +10,7 @@ const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const messagesEndRef = useRef(null);
 
@@ -24,6 +25,7 @@ const ChatPage = () => {
   // Load sessions on component mount
   useEffect(() => {
     loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSessions = async () => {
@@ -199,15 +201,29 @@ const ChatPage = () => {
       await loadSessions();
     } catch (error) {
       console.error('Chat error:', error);
+      
+      // Determine appropriate error message
+      let errorContent = "I apologize, but I encountered an error while processing your request. Please try again.";
+      
+      if (error.userMessage) {
+        errorContent = error.userMessage;
+      } else if (!error.response) {
+        errorContent = "Unable to connect to the server. Please ensure the backend is running (http://localhost:8000) and try again.";
+      } else if (error.response?.data?.error) {
+        errorContent = `I apologize, but ${error.response.data.error}`;
+      } else if (error.response?.data?.detail) {
+        errorContent = `Error: ${error.response.data.detail}`;
+      }
+      
       const errorMessage = {
         id: Date.now() + 1,
         type: 'ai',
-        content: "I apologize, but I'm having trouble processing your request right now. Please try again later.",
+        content: errorContent,
         timestamp: new Date(),
         error: true
       };
       setMessages(prev => [...prev, errorMessage]);
-      toast.error('Failed to send message');
+      toast.error(error.userMessage || 'Failed to send message');
     } finally {
       setIsLoading(false);
     }

@@ -13,7 +13,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.1",
-    "axios": "^1.6.5",
+    "axios": "^1.7.9",
     "lucide-react": "^0.263.1",
     "recharts": "^2.8.0",
     "react-hook-form": "^7.48.2",

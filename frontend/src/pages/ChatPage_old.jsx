@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader, Trash2, MessageCircle } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import toast from 'react-hot-toast';

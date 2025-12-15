@@ -92,12 +92,29 @@ class AgentCoordinator:
             return final_response
             
         except Exception as e:
+            error_str = str(e)
             self.logger.error(f"Error processing user request: {e}")
-            return {
-                "error": "I encountered an error while processing your request. Please try again.",
-                "status": "error",
-                "coordinator": "AgentCoordinator"
-            }
+            
+            # Detect specific error types
+            if '429' in error_str or 'quota' in error_str.lower() or 'rate limit' in error_str.lower():
+                return {
+                    "error": "⚠️ API quota limit reached. The AI service will be restored within 24 hours. You can still use food database lookups!",
+                    "status": "quota_exceeded",
+                    "coordinator": "AgentCoordinator",
+                    "suggestion": "Try searching for specific foods using the nutrition database, or check your API quota at https://ai.google.dev/usage"
+                }
+            elif 'api key' in error_str.lower() or '401' in error_str or '403' in error_str:
+                return {
+                    "error": "⚠️ API configuration issue. Please check your API keys in the .env file.",
+                    "status": "config_error",
+                    "coordinator": "AgentCoordinator"
+                }
+            else:
+                return {
+                    "error": "I encountered an error while processing your request. Please try again.",
+                    "status": "error",
+                    "coordinator": "AgentCoordinator"
+                }
     
     async def _analyze_user_intent(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze user intent to determine routing"""

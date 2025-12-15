@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Home,
   MessageCircle,
   User,
-  Menu,
   X,
   LogOut,
-  ChevronDown,
-  ChevronRight,
   Plus,
   Trash2,
   Pencil,
@@ -21,7 +18,6 @@ import FaviconIcon from './FaviconIcon';
 
 const Layout = ({ children, sessions, activeSessionId, onSessionClick, onNewSession, onDeleteSession, onRenameSession }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showChatHistory, setShowChatHistory] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
   const { user, logout } = useAuth();
