@@ -16,7 +16,7 @@ class DietTrackerAgent(BaseAgent):
         super().__init__(
             name="DietTracker",
             role="Diet tracking, progress monitoring, and behavioral analysis specialist",
-            model_name="gemini-1.5-flash"
+            model_name="gemini-2.5-flash"
         )
         
         self.capabilities = [

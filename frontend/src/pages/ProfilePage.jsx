@@ -188,6 +188,52 @@ const ProfilePage = () => {
     'weight_loss', 'weight_gain', 'muscle_gain', 'maintenance', 'heart_health', 'diabetes_management', 'general_wellness'
   ]
 
+  const formatMessageContent = (content) => {
+    if (!content) return '';
+    
+    let html = content;
+    
+    // Convert ### headings to styled h3 with emoji support and blue theme
+    html = html.replace(/###\s+\*\*(.+?)\*\*/g, '<h3 class="text-2xl font-bold text-blue-800 mb-4 mt-6 pb-2 border-b-2 border-blue-200 flex items-center gap-2">$1</h3>');
+    html = html.replace(/###\s+(.+?)$/gm, '<h3 class="text-2xl font-bold text-blue-800 mb-4 mt-6 pb-2 border-b-2 border-blue-200">$1</h3>');
+    
+    // Convert ## headings to styled h2
+    html = html.replace(/##\s+\*\*(.+?)\*\*/g, '<h2 class="text-3xl font-bold text-blue-900 mb-5 mt-7 pb-3 border-b-4 border-blue-300">$1</h2>');
+    html = html.replace(/##\s+(.+?)$/gm, '<h2 class="text-3xl font-bold text-blue-900 mb-5 mt-7 pb-3 border-b-4 border-blue-300">$1</h2>');
+    
+    // Convert # headings to styled h1
+    html = html.replace(/#\s+\*\*(.+?)\*\*/g, '<h1 class="text-4xl font-bold text-blue-900 mb-6 mt-8 pb-3 border-b-4 border-blue-400">$1</h1>');
+    html = html.replace(/#\s+(.+?)$/gm, '<h1 class="text-4xl font-bold text-blue-900 mb-6 mt-8 pb-3 border-b-4 border-blue-400">$1</h1>');
+    
+    // Convert **text** to bold with blue accent
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-blue-900 bg-blue-50 px-1 rounded">$1</strong>');
+    
+    // Convert *text* to italic
+    html = html.replace(/\*([^\*]+?)\*/g, '<em class="italic text-gray-700">$1</em>');
+    
+    // Convert bullet points • to styled list items with better spacing
+    html = html.replace(/^[•\*]\s+(.+?)$/gm, '<li class="ml-6 mb-3 pl-2 flex items-start leading-relaxed"><span class="text-blue-600 mr-3 mt-1 text-lg">●</span><span class="flex-1">$1</span></li>');
+    
+    // Wrap consecutive list items in ul with better styling
+    html = html.replace(/(<li class="ml-6[^>]*>[\s\S]+?<\/li>)(?!\s*<li)/g, '<ul class="space-y-2 my-5 bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">$1</ul>');
+    
+    // Convert horizontal rules
+    html = html.replace(/^---$/gm, '<hr class="my-6 border-t-2 border-gray-300" />');
+    
+    // Convert line breaks to <br> with proper spacing
+    html = html.replace(/\n\n/g, '</p><p class="mb-4 leading-relaxed text-base">');
+    html = html.replace(/\n/g, '<br />');
+    
+    // Wrap in paragraph with better spacing
+    html = `<div class="formatted-content space-y-2"><p class="mb-4 leading-relaxed text-base">${html}</p></div>`;
+    
+    // Clean up empty paragraphs
+    html = html.replace(/<p class="mb-4 leading-relaxed text-base"><\/p>/g, '');
+    html = html.replace(/<p class="mb-4 leading-relaxed text-base"><br \/><\/p>/g, '');
+    
+    return html;
+  }
+
   return (
     <div className="min-h-screen bg-white p-4 md:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -875,9 +921,11 @@ const ProfilePage = () => {
                 
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <div className="prose prose-sm max-w-none">
-                    <div className="whitespace-pre-wrap text-gray-800" style={{ fontFamily: 'TASA Explorer, sans-serif' }}>
-                      {aiAnalysis.response}
-                    </div>
+                    <div 
+                      className="text-gray-800 leading-relaxed" 
+                      style={{ fontFamily: 'TASA Explorer, sans-serif' }}
+                      dangerouslySetInnerHTML={{ __html: formatMessageContent(aiAnalysis.response) }}
+                    />
                   </div>
                   
                   {aiAnalysis.analysis_data && (

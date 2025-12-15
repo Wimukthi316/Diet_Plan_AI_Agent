@@ -15,7 +15,7 @@ class NutritionCalculatorAgent(BaseAgent):
         super().__init__(
             name="NutritionCalculator",
             role="Nutritional analysis, calorie counting, and nutrient breakdown specialist",
-            model_name="gemini-1.5-flash"
+            model_name="gemini-2.5-flash"
         )
         
         self.capabilities = [

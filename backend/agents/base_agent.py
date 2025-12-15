@@ -21,7 +21,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 class BaseAgent(ABC):
     """Base class for all AI agents"""
     
-    def __init__(self, name: str, role: str, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, name: str, role: str, model_name: str = "gemini-2.5-flash"):
         self.name = name
         self.role = role
         self.model = genai.GenerativeModel(model_name)

@@ -266,6 +266,52 @@ const ChatPage = () => {
     return content || 'I received your message but had trouble generating a response. Could you please rephrase your question?';
   };
 
+  const formatMessageContent = (content) => {
+    if (!content) return '';
+    
+    let html = content;
+    
+    // Convert ### headings to styled h3 with emoji support
+    html = html.replace(/###\s+\*\*(.+?)\*\*/g, '<h3 class="text-2xl font-bold text-green-800 mb-4 mt-6 pb-2 border-b-2 border-green-200 flex items-center gap-2">$1</h3>');
+    html = html.replace(/###\s+(.+?)$/gm, '<h3 class="text-2xl font-bold text-green-800 mb-4 mt-6 pb-2 border-b-2 border-green-200">$1</h3>');
+    
+    // Convert ## headings to styled h2
+    html = html.replace(/##\s+\*\*(.+?)\*\*/g, '<h2 class="text-3xl font-bold text-green-900 mb-5 mt-7 pb-3 border-b-4 border-green-300">$1</h2>');
+    html = html.replace(/##\s+(.+?)$/gm, '<h2 class="text-3xl font-bold text-green-900 mb-5 mt-7 pb-3 border-b-4 border-green-300">$1</h2>');
+    
+    // Convert # headings to styled h1
+    html = html.replace(/#\s+\*\*(.+?)\*\*/g, '<h1 class="text-4xl font-bold text-green-900 mb-6 mt-8 pb-3 border-b-4 border-green-400">$1</h1>');
+    html = html.replace(/#\s+(.+?)$/gm, '<h1 class="text-4xl font-bold text-green-900 mb-6 mt-8 pb-3 border-b-4 border-green-400">$1</h1>');
+    
+    // Convert **text** to bold with green accent
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-green-900 bg-green-50 px-1 rounded">$1</strong>');
+    
+    // Convert *text* to italic
+    html = html.replace(/\*([^\*]+?)\*/g, '<em class="italic text-gray-700">$1</em>');
+    
+    // Convert bullet points • to styled list items with better spacing
+    html = html.replace(/^[•\*]\s+(.+?)$/gm, '<li class="ml-6 mb-3 pl-2 flex items-start leading-relaxed"><span class="text-green-600 mr-3 mt-1 text-lg">●</span><span class="flex-1">$1</span></li>');
+    
+    // Wrap consecutive list items in ul with better styling
+    html = html.replace(/(<li class="ml-6[^>]*>[\s\S]+?<\/li>)(?!\s*<li)/g, '<ul class="space-y-2 my-5 bg-gray-50 p-4 rounded-lg border-l-4 border-green-500">$1</ul>');
+    
+    // Convert horizontal rules
+    html = html.replace(/^---$/gm, '<hr class="my-6 border-t-2 border-gray-300" />');
+    
+    // Convert line breaks to <br> with proper spacing
+    html = html.replace(/\n\n/g, '</p><p class="mb-4 leading-relaxed text-base">');
+    html = html.replace(/\n/g, '<br />');
+    
+    // Wrap in paragraph with better spacing
+    html = `<div class="formatted-content space-y-2"><p class="mb-4 leading-relaxed text-base">${html}</p></div>`;
+    
+    // Clean up empty paragraphs
+    html = html.replace(/<p class="mb-4 leading-relaxed text-base"><\/p>/g, '');
+    html = html.replace(/<p class="mb-4 leading-relaxed text-base"><br \/><\/p>/g, '');
+    
+    return html;
+  };
+
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], {
       hour: '2-digit',
@@ -347,19 +393,10 @@ const ChatPage = () => {
                     }`}
                   >
                     <div
-                      className="whitespace-pre-wrap leading-relaxed text-sm"
+                      className="leading-relaxed text-sm space-y-3"
                       style={{ fontFamily: 'TASA Explorer, sans-serif' }}
-                    >
-                      {message.content.split('**').map((part, index) =>
-                        index % 2 === 1 ? (
-                          <strong key={index} className="font-bold">
-                            {part}
-                          </strong>
-                        ) : (
-                          <span key={index}>{part}</span>
-                        )
-                      )}
-                    </div>
+                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
+                    />
                     <div
                       className={`text-xs mt-2 ${
                         message.type === 'user' ? 'text-green-100' : 'text-gray-400'
