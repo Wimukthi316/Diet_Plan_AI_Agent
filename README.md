@@ -406,3 +406,4 @@ npm run test:e2e
 - **FastAPI** for the high-performance backend framework
 - **Tailwind CSS** for the beautiful UI components
 
+# Diet Plan AI Agent
